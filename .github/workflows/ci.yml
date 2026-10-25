@@ -1,0 +1,42 @@
+name: Web and desktop checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=moderate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: dist/
+  desktop:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run desktop:smoke
+      - run: npm run desktop:dist -- --mac --arm64
+      - run: '"release/mac-arm64/BrickBuilder Studio.app/Contents/MacOS/BrickBuilder Studio" --smoke-test'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-arm64-app
+          path: |
+            release/*.dmg
+            release/*.zip
