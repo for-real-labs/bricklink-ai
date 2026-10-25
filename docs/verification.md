@@ -53,3 +53,19 @@ Mac packages are unsigned and not notarized. Intel Mac, Windows, and Linux build
 - Order handoff reached `/order` with the imported model and the required AI parts-validation step.
 - LDraw export/reimport rendered the model using LDraw part geometry. Mobile transfer buttons fit within 320px and 390px viewports without page overflow.
 - The native launch command started a separate Studio instance with the generated `.io` filepath. Its update dialog prevented the final model-opening check; native import completion remains unverified.
+
+- Version 0.2 source and packaged Electron smoke tests passed; the Apple Silicon ZIP and DMG are published in the [0.2 preview release](https://github.com/for-real-labs/bricklink-ai/releases/tag/v0.2.0). DMG packaging initially ran out of disk space and succeeded after removing obsolete packages created during this task.
+- Final Studio deployment `dpl_QdNMwYMbPGz7rwjuhsAYkPPn2k1Z` is Ready and serves the matching built asset hashes at studio.brickbuilder.ai.
+- Browser protocol launch could not be confirmed through the browser automation; the native launch and download fallback checks are documented separately above.
+
+
+## Article publication
+
+Both articles were published publicly on AI and LEGO on Substack, with email and app-inbox delivery disabled, then imported using the existing RSS importer. The source HTML, image credits, links, and screenshots are preserved in `articles/2026-10-25-studio/`.
+
+- [Release announcement](https://brickbuilder.ai/blog/ai-for-bricklink-studio-meet-brickbuilder)
+- [Round-trip tutorial](https://brickbuilder.ai/blog/how-to-use-ai-with-bricklink-studio)
+- All 38 article/publication tests and the frontend build passed; the article-only boundary check allowed exactly the three generated blog data/manifest/sitemap files.
+- Combined integration + article deployment `dpl_GuqdhvtpFu2YetPfaPjPFqYfHjBW` is Ready at brickbuilder.ai. The live manifest contains both articles, and both rendered pages were verified in the browser.
+- Studio PR #1 web/desktop CI passed. BrickBuilder integration PR #322 CI passed. Article PR #323 code tests passed; its separate automatic preview failed because the GitHub backend-preview lookup returned HTTP 403. The combined production deployment above succeeded.
+- Changes remain on feature branches with PRs open. No production branch was pushed or merged during this task.

@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-10-25",
+  "release": {
+    "title": "AI for BrickLink Studio: meet BrickBuilder Studio",
+    "subtitle": "Create custom AI brick designs, make manual edits, and bring your models back for AI revisions and parts ordering.",
+    "publishedUrl": "https://legoai.substack.com/p/ai-for-bricklink-studio-meet-brickbuilder",
+    "blogUrl": "https://brickbuilder.ai/blog/ai-for-bricklink-studio-meet-brickbuilder"
+  },
+  "tutorial": {
+    "title": "How to use AI with BrickLink Studio: the BrickBuilder workflow",
+    "subtitle": "Create a design, edit it in BrickBuilder Studio, optionally use native Studio, then return for AI edits and parts ordering.",
+    "publishedUrl": "https://legoai.substack.com/p/how-to-use-ai-with-bricklink-studio",
+    "blogUrl": "https://brickbuilder.ai/blog/how-to-use-ai-with-bricklink-studio"
+  },
+  "sources": [
+    {
+      "url": "https://studiohelp.bricklink.com/hc/en-us/articles/6502277722647-Import-formats",
+      "supports": "Native Studio opens/imports LDraw and other model formats."
+    },
+    {
+      "url": "https://studiohelp.bricklink.com/hc/en-us/articles/6502197862679-Exporting-to-other-formats",
+      "supports": "Native Studio exports LDraw through File > Export As."
+    },
+    {
+      "url": "https://www.ldraw.org/article/218.html",
+      "supports": "LDraw units, color codes, placement matrices and file syntax."
+    },
+    {
+      "url": "https://studio.brickbuilder.ai/",
+      "supports": "Live toolbar, part editing, LDraw import/export and handoff actions verified in Brave and the in-app browser."
+    },
+    {
+      "url": "https://brickbuilder.ai/",
+      "supports": "Live transfer reaches landing-page edit stage; return button sends model back; imported model order page requires AI validation."
+    }
+  ],
+  "assets": [
+    {
+      "file": "assets/studio-workspace.jpg",
+      "source": "Screenshot of the user-owned BrickBuilder Studio app, captured through the browser on 2026-10-25",
+      "alt": "BrickBuilder Studio’s dark editor with a garden pavilion and the Edit with AI, Import into BrickBuilder, Order this model, and Open in BrickLink controls",
+      "credit": "BrickBuilder / For Real Labs. Imported part geometry uses the LDraw.org Parts Library and its contributing authors.",
+      "isIllustration": false,
+      "permission": "User requested publication about their own app"
+    },
+    {
+      "file": "assets/brickbuilder-ai-edit.jpg",
+      "source": "Screenshot of the user-owned BrickBuilder app after the real AI roof-color edit on 2026-10-25",
+      "permission": "User requested publication about their own app",
+      "alt": "BrickBuilder showing a red-roof pavilion after AI editing, with manual Studio editing and kit-ordering controls",
+      "credit": "BrickBuilder / For Real Labs",
+      "isIllustration": false
+    }
+  ],
+  "publishing": {
+    "publication": "AI and LEGO",
+    "audience": "everyone",
+    "sendEmail": false,
+    "sendAppInbox": false,
+    "status": "published-and-verified",
+    "rssVerified": true,
+    "blogStatus": "published-and-verified",
+    "blogDeploymentId": "dpl_GuqdhvtpFu2YetPfaPjPFqYfHjBW",
+    "verifiedAt": "2026-10-25T19:59:32.172050+00:00"
+  }
+}
