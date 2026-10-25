@@ -1,7 +1,7 @@
 name: Web and desktop checks
 on:
   push:
-    branches: [main, feat/brick-studio]
+    branches: [main]
   pull_request:
 permissions:
   contents: read

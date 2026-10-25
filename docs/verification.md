@@ -5,7 +5,8 @@ Verified locally on an Apple Silicon Mac on October 25, 2026.
 ## Automated checks
 
 - 60 tests passed across domain validation, collision and placement rules, snapping, inventory/LDraw export, undo/redo, procedural geometry bounds for all 26 parts and four rotations, editor interactions, autosave, step navigation, and binary file downloads.
-- TypeScript and production Vite build passed using Node 24.22.1.
+- A clean `npm ci`, TypeScript, and production Vite build passed using Node 24.22.1.
+- Peer dependency resolution is explicitly enabled in `.npmrc` so local and CI lockfile behavior match.
 - `npm audit --audit-level=moderate`: zero known vulnerabilities.
 - Electron source-build smoke test passed.
 - Apple Silicon `.app`, `.dmg`, and `.zip` packaging completed.
