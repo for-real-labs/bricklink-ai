@@ -1,2 +1,81 @@
-# bricklink-ai
-An independent, open-source 3D brick building workspace for the web and desktop.
+# Bricklink AI
+
+An independent, open-source 3D brick editor for the web and desktop. A small, working interpretation of BrickLink Studio's core building workflow, implemented in React, TypeScript, Three.js, and Electron.
+
+![Bricklink AI workspace](docs/workspace.jpg)
+
+## Run it
+
+Use **Node.js 24 LTS** (or Node 22.12+). No account, API key, backend, or external part download is needed.
+
+```sh
+npm ci
+npm run dev
+```
+
+Open the printed local URL. For the desktop app:
+
+```sh
+npm run desktop
+```
+
+During development, `npm run desktop:dev` starts Vite on port 5174 and opens Electron. `npm run build` produces a static web app in `dist/`; `npm run preview` serves the production build. Upload the contents of `dist/` to any static web host to deploy it.
+
+## Included
+
+- 26 original procedural parts: bricks, plates, tiles, slopes, and round parts.
+- A real, lit 3D scene with shadows; orbit, pan, zoom, fit, and camera presets.
+- Search by name, dimensions, or part number; filter by category.
+- Click-to-place with repeat placement, stacking, stud-grid snapping, and bounding-box collision checks.
+- Single/multiple selection, move, quarter-turn rotation, duplicate, hide/show, delete, and numerical position editing.
+- 16 colors, 50 levels of undo/redo, and up to 2,000 parts per project.
+- Local autosave, validated JSON project import/export, PNG snapshots, CSV inventories, and LDraw export.
+- Build-step assignment and a simple step-through instruction view.
+- Responsive drawers on small screens, keyboard shortcuts, and modal focus management.
+- Sandboxed Electron wrapper with native application menus and local packaged assets.
+
+The garden pavilion example has 46 pieces and four build steps. Choose **New project → Blank canvas** to start your own model. The question-mark button explains controls. Select a brick and press **M** to pick it up, click to place it, or use the arrow keys and position fields for precision. Y is measured in plate heights; X and Z in studs.
+
+## Files and privacy
+
+Projects use `.bricklink.json` (format version 1). The current project saves automatically on this device; download a project file to back it up or move it between the web and desktop apps. Opening a project or starting another replaces this workspace. There is no cloud sync. Imported projects are limited to 2 MB and 2,000 parts and are validated before replacing your model.
+
+Analytics are **disabled by default**. Optional PostHog events use `studio_*` names; they contain control names, part identifiers, counts, and colors, never project names or model files. To enable them for your own deployment, set a public project key via `VITE_POSTHOG_KEY` and optionally `VITE_POSTHOG_HOST` (`https://us.i.posthog.com` or `https://eu.i.posthog.com`). Do not put secret keys in Vite environment variables. Autocapture and session recording are disabled.
+
+## Desktop packages
+
+```sh
+npm run desktop:package                    # unpacked app for this platform
+npm run desktop:dist -- --mac --arm64       # Apple Silicon .app, DMG, and ZIP
+npm run desktop:dist -- --mac --x64         # Intel Mac (build/test separately)
+npm run desktop:dist -- --win              # Windows installer
+npm run desktop:dist -- --linux            # Linux AppImage
+```
+
+Outputs go to `release/`. The Apple Silicon build is locally tested. Windows, Linux, and Intel Mac targets are configured but not verified. Mac packages are **unsigned and not notarized**; distribution to other Macs requires your own Apple signing and notarization setup. The repository does not include signing credentials. `npm run desktop` works directly from a local development checkout.
+
+## Checks
+
+```sh
+npm test
+npm run build
+npm run desktop:smoke
+npm audit
+```
+
+The desktop smoke test launches the actual Electron renderer in an isolated temporary profile, verifies a WebGL canvas, the desktop bridge, rendered model parts, and absence of Node access in the page. It does not touch your saved projects. Run the packaged binary with `--smoke-test` to verify the packaged build too. CI runs unit/component tests, the web build, the Mac smoke test, packaging, and a second smoke test against the packaged app; web and Mac builds are uploaded as workflow artifacts.
+
+## Scope and architecture
+
+This is a basic editor, not the full Studio catalog or a CAD/connectivity solver. Parts have original approximate geometry; collisions use axis-aligned bounding boxes and do not validate physical clutch, stability, legal connections, or support. Hidden parts do not participate in snapping or collisions. Slope geometry, colors, and LDraw output are approximations. There is no `.io` import, LDraw import, hinge/clip/axle connection solver, photorealistic rendering, page-layout instruction maker, marketplace integration, collaboration, or AI generation. The repository name does not imply an AI service.
+
+- `src/domain/`: catalog, model validation, geometry constraints, history, inventories, and interchange.
+- `src/useEditor.ts`: editor state and commands.
+- `src/components/`: accessible editor panels and dialogs.
+- `src/scene/`: original procedural meshes; the viewport owns the rendering lifecycle.
+- `electron/`: isolated desktop process and a narrow, one-way menu bridge.
+- `tests/`: domain, geometry, history, and UI behavior tests.
+
+See [research and design notes](docs/research.md) and [verification notes](docs/verification.md).
+
+MIT licensed. BrickLink and LEGO are trademarks of their respective owners. This project is not affiliated with or endorsed by BrickLink or the LEGO Group. No Studio code, artwork, or proprietary part assets are included.

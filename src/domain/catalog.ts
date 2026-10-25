@@ -1,0 +1,102 @@
+export type PartKind = "brick" | "plate" | "tile" | "slope" | "round";
+export interface Part {
+  id: string;
+  name: string;
+  width: number;
+  depth: number;
+  height: number;
+  category: string;
+  kind: PartKind;
+}
+const part = (
+  id: string,
+  name: string,
+  width: number,
+  depth: number,
+  height: number,
+  kind: PartKind = "brick",
+): Part => ({
+  id,
+  name,
+  width,
+  depth,
+  height,
+  kind,
+  category:
+    kind === "brick"
+      ? "Bricks"
+      : kind === "plate"
+        ? "Plates"
+        : kind === "tile"
+          ? "Tiles"
+          : kind === "slope"
+            ? "Slopes"
+            : "Round",
+});
+// Dimensions are stud widths and plate heights. Meshes are original approximations.
+export const PARTS: Part[] = [
+  part("3001", "Brick 2 × 4", 4, 2, 3),
+  part("3002", "Brick 2 × 3", 3, 2, 3),
+  part("3003", "Brick 2 × 2", 2, 2, 3),
+  part("3004", "Brick 1 × 2", 2, 1, 3),
+  part("3005", "Brick 1 × 1", 1, 1, 3),
+  part("3009", "Brick 1 × 6", 6, 1, 3),
+  part("3010", "Brick 1 × 4", 4, 1, 3),
+  part("3008", "Brick 1 × 8", 8, 1, 3),
+  part("3020", "Plate 2 × 4", 4, 2, 1, "plate"),
+  part("3021", "Plate 2 × 3", 3, 2, 1, "plate"),
+  part("3022", "Plate 2 × 2", 2, 2, 1, "plate"),
+  part("3023", "Plate 1 × 2", 2, 1, 1, "plate"),
+  part("3024", "Plate 1 × 1", 1, 1, 1, "plate"),
+  part("3031", "Plate 4 × 4", 4, 4, 1, "plate"),
+  part("3032", "Plate 4 × 6", 6, 4, 1, "plate"),
+  part("3036", "Plate 6 × 8", 8, 6, 1, "plate"),
+  part("41539", "Plate 8 × 8", 8, 8, 1, "plate"),
+  part("3068b", "Tile 2 × 2", 2, 2, 1, "tile"),
+  part("3069b", "Tile 1 × 2", 2, 1, 1, "tile"),
+  part("3070b", "Tile 1 × 1", 1, 1, 1, "tile"),
+  part("2431", "Tile 1 × 4", 4, 1, 1, "tile"),
+  part("3039", "Slope 45° 2 × 2", 2, 2, 3, "slope"),
+  part("3040b", "Slope 45° 1 × 2", 1, 2, 3, "slope"),
+  part("3062b", "Round brick 1 × 1", 1, 1, 3, "round"),
+  part("3941", "Round brick 2 × 2", 2, 2, 3, "round"),
+  part("4073", "Round plate 1 × 1", 1, 1, 1, "round"),
+];
+export const PART_MAP = new Map(PARTS.map((p) => [p.id, p]));
+export const CATEGORIES = [
+  "All parts",
+  "Bricks",
+  "Plates",
+  "Tiles",
+  "Slopes",
+  "Round",
+];
+export const COLORS = [
+  { name: "Terracotta", hex: "#c85c42", ldraw: 70 },
+  { name: "Coral", hex: "#ee735c", ldraw: 4 },
+  { name: "Sunflower", hex: "#f5c842", ldraw: 14 },
+  { name: "Cream", hex: "#eadac0", ldraw: 19 },
+  { name: "White", hex: "#f4f4ef", ldraw: 15 },
+  { name: "Stone", hex: "#a7b0b4", ldraw: 71 },
+  { name: "Graphite", hex: "#444a50", ldraw: 72 },
+  { name: "Black", hex: "#22272d", ldraw: 0 },
+  { name: "Sage", hex: "#9cae86", ldraw: 120 },
+  { name: "Forest", hex: "#365f4c", ldraw: 288 },
+  { name: "Mint", hex: "#83c5b4", ldraw: 323 },
+  { name: "Ocean", hex: "#477f98", ldraw: 3 },
+  { name: "Blue", hex: "#4c78ba", ldraw: 1 },
+  { name: "Sky", hex: "#b8d9e6", ldraw: 9 },
+  { name: "Lavender", hex: "#b5a2cf", ldraw: 31 },
+  { name: "Rose", hex: "#e5b4bd", ldraw: 13 },
+];
+export function searchParts(query: string, category: string) {
+  const normalized = query.toLowerCase().replace(/[×x\s]/g, "");
+  return PARTS.filter(
+    (p) =>
+      (category === "All parts" || p.category === category) &&
+      `${p.id}${p.name}`
+        .toLowerCase()
+        .replace(/[×x\s]/g, "")
+        .includes(normalized),
+  );
+}

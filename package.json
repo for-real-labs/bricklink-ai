@@ -1,0 +1,89 @@
+{
+  "name": "bricklink-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An independent 3D brick building workspace for web and desktop",
+  "author": "For Real Labs",
+  "license": "MIT",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "desktop": "npm run build && electron .",
+    "desktop:dev": "concurrently -k \"vite --host 127.0.0.1 --port 5174 --strictPort\" \"wait-on http://127.0.0.1:5174 && electron . --dev\"",
+    "desktop:smoke": "npm run build && electron . --smoke-test",
+    "desktop:package": "npm run build && electron-builder --dir",
+    "desktop:dist": "npm run build && electron-builder",
+    "format": "prettier --write src tests electron *.ts *.json *.html .github/workflows/*.yml"
+  },
+  "build": {
+    "appId": "com.forreallabs.bricklinkai",
+    "productName": "Bricklink AI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "identity": null,
+      "icon": "build/icon.png"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Graphics",
+      "icon": "build/icon.png"
+    }
+  },
+  "dependencies": {
+    "lucide-react": "^1.61.0",
+    "posthog-js": "^1.438.21",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "^0.186.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "concurrently": "^10.0.6",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "jsdom": "^27.0.1",
+    "prettier": "^3.9.10",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.7",
+    "vitest": "^4.1.12",
+    "wait-on": "^9.5.1"
+  },
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  }
+}
