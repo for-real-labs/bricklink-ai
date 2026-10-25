@@ -1,3 +1,4 @@
+import { LibraryThumbnail } from "./LibraryThumbnail";
 import type { Part } from "../domain/catalog";
 export function PartPreview({
   part,
@@ -6,6 +7,8 @@ export function PartPreview({
   part: Part;
   color?: string;
 }) {
+  if (part.ldraw)
+    return <LibraryThumbnail id={part.id} category={part.category} />;
   const width = part.width,
     depth = part.depth,
     h = part.height === 1 ? 7 : 17;

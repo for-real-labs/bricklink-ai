@@ -69,3 +69,15 @@ Both articles were published publicly on AI and LEGO on Substack, with email and
 - Combined integration + article deployment `dpl_GuqdhvtpFu2YetPfaPjPFqYfHjBW` is Ready at brickbuilder.ai. The live manifest contains both articles, and both rendered pages were verified in the browser.
 - Studio PR #1 web/desktop CI passed. BrickBuilder integration PR #322 CI passed. Article PR #323 code tests passed; its separate automatic preview failed because the GitHub backend-preview lookup returned HTTP 403. The combined production deployment above succeeded.
 - Changes remain on feature branches with PRs open. No production branch was pushed or merged during this task.
+
+## Version 0.3 core workflows
+
+- Clean Node 24 `npm ci` completed; npm audit found zero vulnerabilities.
+- All 110 tests passed across 12 suites. The production TypeScript/Vite build passed.
+- Source and packaged Electron smoke tests passed with WebGL, 46 example parts, the narrow desktop bridge, and no renderer Node access.
+- Apple Silicon ZIP and DMG packaging completed successfully. Packages remain unsigned and not notarized.
+- Actual web acceptance: encrypted `.io` import, Technic 3700 geometry/thumbnail loading and placement, two-part marquee selection, 45° Z rotation, copy/paste, isolation/restoration, step reorder/delete, and selectable overlap review.
+- Actual packaged Mac acceptance: Command-C/Command-V duplicated a selected part, undo restored it, and an encrypted `.io` file opened with all three parts and two steps. The example workspace was restored after testing.
+- Mobile checks at actual 320px and 390px CSS widths showed no page overflow. The compact mobile category picker leaves the thumbnail grid usable; advanced inspector controls scroll within the panel.
+- Reference screenshots: `docs/catalog-mobile-v0.3.jpg`, `docs/mobile-v0.3.jpg`, and `docs/desktop-v0.3.jpg`.
+- See `docs/core-workflows.md` for the ten workflows and explicit scope limits. Native Studio deep-link completion is still unverified; this release verifies reading Studio files in BrickBuilder Studio, not the external app's startup behavior.

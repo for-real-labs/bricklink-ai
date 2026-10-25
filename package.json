@@ -1,6 +1,6 @@
 {
   "name": "brickbuilder-studio",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "An independent 3D brick building workspace for web and desktop",
   "author": "For Real Labs",
@@ -64,6 +64,7 @@
     ]
   },
   "dependencies": {
+    "@zip.js/zip.js": "2.24.0",
     "fflate": "^0.8.3",
     "lucide-react": "^1.61.0",
     "posthog-js": "^1.438.21",

@@ -1,3 +1,4 @@
+import partIndex from "./parts-index.json";
 export type PartKind = "brick" | "plate" | "tile" | "slope" | "round";
 export interface Part {
   id: string;
@@ -7,6 +8,7 @@ export interface Part {
   height: number;
   category: string;
   kind: PartKind;
+  ldraw?: boolean;
 }
 const part = (
   id: string,
@@ -89,9 +91,9 @@ export const COLORS = [
   { name: "Lavender", hex: "#b5a2cf", ldraw: 31 },
   { name: "Rose", hex: "#e5b4bd", ldraw: 13 },
 ];
-export function searchParts(query: string, category: string) {
+export function searchParts(query: string, category: string, library = false) {
   const normalized = query.toLowerCase().replace(/[×x\s]/g, "");
-  return PARTS.filter(
+  return (library ? ALL_PARTS : PARTS).filter(
     (p) =>
       (category === "All parts" || p.category === category) &&
       `${p.id}${p.name}`
@@ -103,7 +105,8 @@ export function searchParts(query: string, category: string) {
 
 export function getPart(id: string): Part {
   return (
-    PART_MAP.get(id) ?? {
+    PART_MAP.get(id) ??
+    LIBRARY_MAP.get(id) ?? {
       id,
       name: `LDraw part ${id}`,
       width: 2,
@@ -114,3 +117,66 @@ export function getPart(id: string): Part {
     }
   );
 }
+
+function libraryCategory(name: string) {
+  if (/^(Brick|Plate|Tile) Round/i.test(name)) return "Round";
+  if (/^Technic/i.test(name)) return "Technic";
+  if (/^(Minifig|Figure)/i.test(name)) return "Minifig";
+  if (/^(Wheel|Tyre)/i.test(name)) return "Wheels";
+  if (/^Tile/i.test(name)) return "Tiles";
+  if (/^Plate/i.test(name)) return "Plates";
+  if (/^Slope/i.test(name)) return "Slopes";
+  if (/^Brick/i.test(name)) return "Bricks";
+  return "Other";
+}
+export const LDRAW_PARTS: Part[] = partIndex
+  .filter(([id]) => !PART_MAP.has(id))
+  .map(([id, name]) => {
+    const dimensions = name.match(/\b(\d+(?:\.\d+)?) x (\d+(?:\.\d+)?)/i);
+    const category = libraryCategory(name);
+    return {
+      id,
+      name,
+      width: dimensions ? Math.min(64, Number(dimensions[2])) : 2,
+      depth: dimensions ? Math.min(64, Number(dimensions[1])) : 2,
+      height: category === "Plates" || category === "Tiles" ? 1 : 3,
+      kind: "brick",
+      category,
+      ldraw: true,
+    };
+  });
+const common = [
+  "3700",
+  "3701",
+  "3702",
+  "3705",
+  "3706",
+  "3710",
+  "2780",
+  "4274",
+  "6141",
+  "2357",
+  "4070",
+  "3034",
+  "3029",
+  "3794b",
+  "4085c",
+  "3666",
+  "2420",
+  "32000",
+  "32054",
+  "30136",
+];
+LDRAW_PARTS.sort((a, b) => {
+  const rank = (id: string) => (common.includes(id) ? common.indexOf(id) : 100);
+  return rank(a.id) - rank(b.id) || a.name.localeCompare(b.name);
+});
+export const ALL_PARTS = [...PARTS, ...LDRAW_PARTS];
+const LIBRARY_MAP = new Map(LDRAW_PARTS.map((part) => [part.id, part]));
+export const LIBRARY_CATEGORIES = [
+  ...CATEGORIES,
+  "Technic",
+  "Minifig",
+  "Wheels",
+  "Other",
+];

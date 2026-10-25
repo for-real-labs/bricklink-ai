@@ -1,6 +1,6 @@
 # BrickBuilder Studio
 
-An independent, open-source 3D brick editor for the web and desktop. A small, working interpretation of BrickLink Studio's core building workflow, implemented in React, TypeScript, Three.js, and Electron.
+An independent, open-source 3D brick editor for the web and desktop. A working interpretation of BrickLink Studio's core building workflow, implemented in React, TypeScript, Three.js, and Electron.
 
 **Live app: [studio.brickbuilder.ai](https://studio.brickbuilder.ai)** · Repository: [for-real-labs/bricklink-ai](https://github.com/for-real-labs/bricklink-ai)
 
@@ -26,14 +26,16 @@ During development, `npm run desktop:dev` starts Vite on port 5174 and opens Ele
 ## Included
 
 - Studio-inspired dark workspace, BrickBuilder wordmark, compact toolbar, and working File/Edit/Model/View/Help menus.
-- 26 original procedural parts: bricks, plates, tiles, slopes, and round parts.
+- Searchable catalog of 14,623 parts, including 26 original offline starter shapes and licensed LDraw geometry with lazy rendered thumbnails.
 - A real, lit 3D scene with shadows; orbit, pan, zoom, fit, and camera presets.
 - Search by name, dimensions, or part number; filter by category.
 - Click-to-place with repeat placement, stacking, stud-grid snapping, and bounding-box collision checks.
-- Single/multiple selection, move, quarter-turn rotation, duplicate, hide/show, delete, and numerical position editing.
+- Click or box selection; select by type/color; copy, cut, paste, duplicate, hide, isolate, show all, and undo.
+- Move complete assemblies; whole-, half-, or quarter-stud snapping; precise X/Y/Z rotation around a shared center.
+- Named independent submodels, MPD export, and an approximate overlap report with selectable problem pairs.
 - 16 colors, 50 levels of undo/redo, and up to 2,000 parts per project.
-- Local autosave, validated JSON project import/export, PNG snapshots, CSV inventories, and LDraw export.
-- Build-step assignment and a simple step-through instruction view.
+- Local autosave, validated JSON projects, native Studio `.io` import (including standard encrypted containers), LDraw/MPD import, drag-and-drop opening, PNG snapshots, CSV inventories, and LDraw/MPD export.
+- Build-step assignment, reorder/delete while retaining parts, and a step-through instruction view.
 - Responsive drawers on small screens, keyboard shortcuts, and modal focus management.
 - Sandboxed Electron wrapper with native application menus and local packaged assets.
 
@@ -76,7 +78,7 @@ The desktop smoke test launches the actual Electron renderer in an isolated temp
 
 ## Scope and architecture
 
-This is a basic editor, not the full Studio catalog or a CAD/connectivity solver. Parts have original approximate geometry; collisions use axis-aligned bounding boxes and do not validate physical clutch, stability, legal connections, or support. Hidden parts do not participate in snapping or collisions. Slope geometry, colors, and LDraw output are approximations. LDraw import/export and BrickBuilder AI handoffs are included. Native `.io` import, a hinge/clip/axle connection solver, photorealistic rendering, page-layout instruction editing, and collaboration are not implemented in this editor.
+This is a basic editor, not the full Studio catalog or a CAD/connectivity solver. Parts have original approximate geometry; collisions use axis-aligned bounding boxes and do not validate physical clutch, stability, legal connections, or support. Hidden parts do not participate in snapping or collisions. Slope geometry, colors, and LDraw output are approximations. LDraw import/export and BrickBuilder AI handoffs are included. A hinge/clip/axle connection solver, photorealistic rendering, page-layout instruction editing, and collaboration are not implemented in this editor.
 
 - `src/domain/`: catalog, model validation, geometry constraints, history, inventories, and interchange.
 - `src/useEditor.ts`: editor state and commands.
@@ -93,8 +95,15 @@ MIT licensed. BrickLink and LEGO are trademarks of their respective owners. This
 
 Use **Edit with AI** or **Import into BrickBuilder** to send the current model to the landing-page edit stage at brickbuilder.ai. **Order this model** opens `/order` with this model; imported designs first need an AI edit to validate available parts and colors. No order is placed automatically. The BrickBuilder viewer now has **Edit in BrickBuilder Studio** for the return trip.
 
-Open `.ldr` or `.mpd` through **Open project**. Model subassemblies are flattened; part transforms, color IDs, embedded part geometry, and authorship metadata are retained in exports. Imported geometry is rendered with the LDraw library, loaded over the network if not embedded; unavailable geometry gets a labeled placeholder without deleting the source part. Imported models start with collision checks off because the current checks use approximate bounding boxes, not physical connectors. Limits: 2,000 parts, 100 steps, 16 MB, 256 studs / plate heights. Native `.io` files can be imported into BrickBuilder.ai; export `.ldr` from native Studio for this editor.
+Open or drop `.io`, `.ldr`, or `.mpd` through **Open project**. Nested subassemblies become independent named groups; part transforms, color IDs, embedded part geometry, and authorship metadata are retained in exports. Imported geometry is rendered with the LDraw library, loaded over the network if not embedded; unavailable geometry gets a labeled placeholder without deleting the source part. Imported models start with collision checks off because the current checks use approximate bounding boxes, not physical connectors. Limits: 2,000 parts, 100 steps, 16 MB, 256 studs / plate heights. Standard native `.io` containers open directly here. Unsupported archive variants can be exported as `.ldr` from native Studio.
 
 **Export → BrickLink Studio / LDraw** downloads a native-compatible `.ldr`. **Open in BrickLink** offers the same download and a `brickbuilder-studio://` link through the installed desktop wrapper. The wrapper writes a temporary `.io` container and launches native Studio from its default installation path. On Mac it opens a separate Studio instance, preserving existing windows. Native startup/update prompts may need attention. Large desktop links fall back to file export; web transfers use an origin/window/nonce checked message channel without putting model contents in query strings. Model fragments used by the desktop handoff are cleared before application analytics initialize. No authentication tokens cross between the apps.
 
 The Apple Silicon installer is an unsigned preview. Windows launcher code is included but requires Windows testing; native BrickLink Studio is not available on Linux. See [third-party attributions](docs/third-party.md).
+
+
+## Studio workflows in 0.3
+
+See [the ten acceptance workflows](docs/core-workflows.md) for controls and checks. Copy/paste works within the current workspace; opening another project clears its internal clipboard. Group clones are independent, and nested/linked submodel editing is not reproduced. Use MPD export to preserve named groups; the ordinary LDraw export and AI transfer flatten assemblies while retaining their part transforms and colors.
+
+The catalog is a pinned LDraw snapshot, not the current BrickLink inventory or availability database. Search metadata is bundled, while detailed geometry and thumbnails load from the licensed mirror. Only the starter palette is fully offline. Regenerate the index with `python3 scripts/update-parts-index.py`; it reads part descriptions without copying the native Studio library.

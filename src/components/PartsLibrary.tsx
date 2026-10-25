@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import { Box, ChevronRight, Layers3, Plus, Search, X } from "lucide-react";
-import { PARTS, CATEGORIES } from "../domain/catalog";
+import { PARTS, ALL_PARTS, LIBRARY_CATEGORIES } from "../domain/catalog";
 import { track } from "../analytics";
 import { Button } from "./Button";
 import { PartPreview } from "./PartPreview";
@@ -17,6 +18,9 @@ export function PartsLibrary({ editor }: { editor: Editor }) {
     visibleParts,
     pickPart,
   } = editor;
+  const [limit, setLimit] = useState(60);
+  useEffect(() => setLimit(60), [query, category, editor.libraryMode]);
+  const count = editor.libraryMode ? ALL_PARTS.length : PARTS.length;
   return (
     <aside
       className={`parts-panel ${mobilePanel === "parts" ? "mobile-open" : ""}`}
@@ -33,16 +37,44 @@ export function PartsLibrary({ editor }: { editor: Editor }) {
         >
           <X size={17} />
         </Button>
-        <span className="count-badge desktop-only">{PARTS.length}</span>
+        <span className="count-badge desktop-only">
+          {count.toLocaleString()}
+        </span>
       </div>
       <div className="library-source">
         <Layers3 size={15} />
-        <span>Main parts</span>
-        <span>{PARTS.length}</span>
+        <select
+          aria-label="Parts source"
+          value={editor.libraryMode ? "ldraw" : "starter"}
+          onChange={(event) => {
+            editor.setLibraryMode(event.target.value === "ldraw");
+            setCategory("All parts");
+            track("parts_source_changed", { source: event.target.value });
+          }}
+        >
+          <option value="ldraw">LDraw library</option>
+          <option value="starter">Starter palette · offline</option>
+        </select>
+        <span>{count.toLocaleString()}</span>
       </div>
+      <label className="mobile-category">
+        Category
+        <select
+          aria-label="Part category"
+          value={category}
+          onChange={(event) => {
+            setCategory(event.target.value);
+            track("category_selected", { category: event.target.value });
+          }}
+        >
+          {LIBRARY_CATEGORIES.map((item) => (
+            <option key={item}>{item}</option>
+          ))}
+        </select>
+      </label>
       <div className="category-heading">Shapes</div>
       <div className="category-tabs">
-        {CATEGORIES.map((item) => (
+        {LIBRARY_CATEGORIES.map((item) => (
           <button
             key={item}
             className={category === item ? "selected" : ""}
@@ -77,7 +109,7 @@ export function PartsLibrary({ editor }: { editor: Editor }) {
         <span>{visibleParts.length} parts</span>
       </div>
       <div className="part-grid">
-        {visibleParts.map((part) => (
+        {visibleParts.slice(0, limit).map((part) => (
           <button
             key={part.id}
             title={`Place ${part.name}`}
@@ -97,6 +129,16 @@ export function PartsLibrary({ editor }: { editor: Editor }) {
           </button>
         ))}
       </div>
+      {visibleParts.length > limit && (
+        <Button label="Show more parts" onClick={() => setLimit(limit + 60)}>
+          Show 60 more · {visibleParts.length - limit} remaining
+        </Button>
+      )}
+      {editor.catalogLoading && (
+        <p className="catalog-loading" role="status">
+          Loading part geometry…
+        </p>
+      )}
       {!visibleParts.length && (
         <div className="empty-state">
           No parts found.
@@ -109,7 +151,9 @@ export function PartsLibrary({ editor }: { editor: Editor }) {
         <span>
           BrickBuilder Studio
           <br />
-          <small>26 essential parts</small>
+          <small>
+            {count.toLocaleString()} parts · geometry loads on selection
+          </small>
         </span>
       </div>
     </aside>

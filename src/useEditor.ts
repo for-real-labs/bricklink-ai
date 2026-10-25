@@ -1,12 +1,22 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { COLORS, searchParts } from "./domain/catalog";
+import { COLORS, getPart, searchParts } from "./domain/catalog";
+import { readModelFile } from "./domain/studioFile";
+import { measurePart } from "./scene/ldrawGeometry";
+import {
+  catalogBrick,
+  deleteStep,
+  expandGroups,
+  matchingSelection,
+  moveStep,
+  pasteAssembly,
+  rotateAssembly,
+  type Axis,
+} from "./domain/workflows";
 import {
   canPlace,
   createBrick,
   demoProject,
-  footprint,
   inventory,
-  MAX_FILE_SIZE,
   parseProject,
   type Brick,
   type Project,
@@ -48,11 +58,17 @@ export function useEditor() {
       () => !project.bricks.some((brick) => brick.ldraw),
     ),
     [grid, setGrid] = useState(true);
+  const [gridSize, setGridSize] = useState(1),
+    [boxSelect, setBoxSelect] = useState(false);
+  const [libraryMode, setLibraryMode] = useState(true),
+    [catalogLoading, setCatalogLoading] = useState(false);
+  const [clipboard, setClipboard] = useState<Brick[]>([]);
+  const partRequest = useRef(0);
   const [step, setStep] = useState(project.steps),
     [tab, setTab] = useState<"build" | "instructions">("build"),
     [panel, setPanel] = useState<"model" | "steps">("model");
   const [modal, setModal] = useState<
-      "help" | "export" | "new" | "inventory" | "bricklink" | null
+      "help" | "export" | "new" | "inventory" | "bricklink" | "check" | null
     >(null),
     [notice, setNotice] = useState(""),
     [saved, setSaved] = useState(true),
@@ -64,7 +80,7 @@ export function useEditor() {
     fileInput = useRef<HTMLInputElement>(null);
   const selectedBricks = project.bricks.filter((b) => selected.includes(b.id));
   const first = selectedBricks[0];
-  const visibleParts = searchParts(query, category),
+  const visibleParts = searchParts(query, category, libraryMode),
     rows = inventory(project);
   const safeName =
     project.name.replace(/[^a-zA-Z0-9-_]/g, "-") || "brick-build";
@@ -100,21 +116,42 @@ export function useEditor() {
     );
     announce("Project file saved.");
   }
-  function select(id: string | null, multiple = false) {
+  function select(id: string | null, multiple = false, individual = false) {
+    partRequest.current++;
     setDraft(null);
+    const ids = id
+      ? individual
+        ? [id]
+        : expandGroups(project.bricks, [id]).filter((key) =>
+            project.bricks.some(
+              (b) => b.id === key && !b.hidden && b.step <= step,
+            ),
+          )
+      : [];
     setSelected(
-      id
-        ? multiple
-          ? selected.includes(id)
-            ? selected.filter((item) => item !== id)
-            : [...selected, id]
-          : [id]
-        : [],
+      multiple
+        ? selected.includes(id ?? "")
+          ? selected.filter((key) => !ids.includes(key))
+          : [...new Set([...selected, ...ids])]
+        : ids,
     );
     track("selection_changed", { count: id ? 1 : 0 });
   }
   function place(brick: Brick) {
     const moving = project.bricks.some((b) => b.id === brick.id);
+    if (moving && selected.length > 1) {
+      const anchor = project.bricks.find((b) => b.id === brick.id)!;
+      applySelection(
+        selectedBricks.map((b) => ({
+          ...b,
+          x: b.x + brick.x - anchor.x,
+          y: b.y + brick.y - anchor.y,
+          z: b.z + brick.z - anchor.z,
+        })),
+      );
+      setDraft(null);
+      return;
+    }
     if (!moving && project.bricks.length >= 2000) {
       announce("This workspace supports up to 2,000 parts.");
       return;
@@ -135,16 +172,23 @@ export function useEditor() {
   }
   function changeSelection(transform: (b: Brick) => Brick) {
     const updated = selectedBricks.map(transform);
+    const moved = updated.some(
+      (b, i) =>
+        ["x", "y", "z", "rotation"].some(
+          (key) => b[key as "x"] !== selectedBricks[i][key as "x"],
+        ) || b.ldraw !== selectedBricks[i].ldraw,
+    );
+    applySelection(updated, moved);
+  }
+  function applySelection(updated: Brick[], detectCollision = true) {
+    if (!updated.length) return;
     if (
       updated.some(
         (b) =>
           !canPlace(
-            [
-              ...project.bricks.filter((b) => !selected.includes(b.id)),
-              ...updated,
-            ],
+            project.bricks.filter((b) => !selected.includes(b.id)),
             b,
-            collision,
+            collision && detectCollision,
           ),
       )
     ) {
@@ -161,8 +205,24 @@ export function useEditor() {
     });
   }
   function rotate() {
-    if (draft) setDraft({ ...draft, rotation: (draft.rotation + 1) % 4 });
+    if (
+      draft &&
+      selectedBricks.length > 1 &&
+      project.bricks.some((b) => b.id === draft.id)
+    )
+      rotatePrecise("y", 90);
+    else if (draft) setDraft({ ...draft, rotation: (draft.rotation + 1) % 4 });
+    else if (selectedBricks.length > 1) rotatePrecise("y", 90);
     else changeSelection((b) => ({ ...b, rotation: (b.rotation + 1) % 4 }));
+  }
+  function rotatePrecise(axis: Axis, degrees: number) {
+    try {
+      applySelection(rotateAssembly(selectedBricks, axis, degrees));
+      setDraft(null);
+      track("assembly_rotated", { axis, degrees, count: selected.length });
+    } catch (error) {
+      announce((error as Error).message);
+    }
   }
   function remove() {
     if (!selected.length) return;
@@ -174,25 +234,81 @@ export function useEditor() {
     setDraft(null);
   }
   function duplicate() {
-    if (!first || project.bricks.length + selectedBricks.length > 2000) return;
-    const width =
-      Math.max(...selectedBricks.map((b) => b.x + footprint(b).width)) -
-      Math.min(...selectedBricks.map((b) => b.x));
-    for (let offset = 1; offset < 30; offset++) {
-      const copies = selectedBricks.map((b) => ({
-        ...b,
-        id: crypto.randomUUID(),
-        x: b.x + (width + 1) * offset,
-        step,
-      }));
-      if (copies.every((b) => canPlace(project.bricks, b, collision))) {
-        commit({ ...project, bricks: [...project.bricks, ...copies] });
-        setSelected(copies.map((b) => b.id));
-        announce("Selection duplicated.");
-        return;
-      }
+    paste(selectedBricks);
+  }
+  function copy(cut = false) {
+    if (!selectedBricks.length) return;
+    setClipboard(structuredClone(selectedBricks));
+    if (cut) remove();
+    announce(
+      `${selectedBricks.length} parts ${cut ? "cut" : "copied"}. Paste in this workspace.`,
+    );
+    track(cut ? "selection_cut" : "selection_copied", {
+      count: selected.length,
+    });
+  }
+  function paste(parts = clipboard) {
+    try {
+      const next = pasteAssembly(project, parts, step, collision);
+      commit(next.project);
+      setSelected(next.ids);
+      setDraft(null);
+      announce(
+        `${next.ids.length} parts pasted. Use Move or the position fields to place them.`,
+      );
+      track("selection_pasted", { count: next.ids.length });
+    } catch (error) {
+      announce((error as Error).message);
     }
-    announce("No free space nearby for a duplicate.");
+  }
+  function selectMatching(mode: "type" | "color") {
+    setDraft(null);
+    setSelected(matchingSelection(project, selected, mode, step));
+    track("select_matching", { mode });
+  }
+  function selectBox(ids: string[], additive: boolean) {
+    const expanded = expandGroups(project.bricks, ids).filter((id) =>
+      project.bricks.some((b) => b.id === id && !b.hidden && b.step <= step),
+    );
+    setSelected(additive ? [...new Set([...selected, ...expanded])] : expanded);
+    track("box_selected", { count: expanded.length });
+  }
+  function groupSelection(name: string) {
+    if (!name.trim() || !selected.length) return;
+    changeSelection((b) => ({ ...b, group: name.trim().slice(0, 80) }));
+    track("submodel_created", { count: selected.length });
+  }
+  function ungroup() {
+    changeSelection((b) => ({ ...b, group: undefined }));
+    track("submodel_released");
+  }
+  function visibility(action: "hide" | "isolate" | "show") {
+    commit({
+      ...project,
+      bricks: project.bricks.map((b) => ({
+        ...b,
+        hidden:
+          action === "show"
+            ? false
+            : action === "isolate"
+              ? !selected.includes(b.id)
+              : selected.includes(b.id) || b.hidden,
+      })),
+    });
+    setDraft(null);
+    track("visibility_changed", { action });
+  }
+  function reorderStep(direction: -1 | 1) {
+    const target = step + direction;
+    commit(moveStep(project, step, target));
+    changeStep(target);
+    track("step_moved", { from: step, to: target });
+  }
+  function removeStep() {
+    commit(deleteStep(project, step));
+    changeStep(Math.max(1, step - 1));
+    announce("Step removed; its parts were kept in the adjacent step.");
+    track("step_deleted");
   }
   function pickColor(hex: string) {
     setColor(hex);
@@ -200,14 +316,33 @@ export function useEditor() {
     else if (selected.length) changeSelection((b) => ({ ...b, color: hex }));
     track("color_selected", { color: hex });
   }
-  function pickPart(partId: string) {
-    setDraft(createBrick(partId, color, step));
+  async function pickPart(partId: string) {
+    setBoxSelect(false);
+    const request = ++partRequest.current;
+    if (getPart(partId).ldraw) {
+      setCatalogLoading(true);
+      try {
+        const bounds = await measurePart(partId);
+        if (partRequest.current !== request) return;
+        setDraft(catalogBrick(partId, color, step, bounds));
+      } catch {
+        if (partRequest.current === request)
+          announce(
+            "This part could not be loaded. Check your connection and try another part.",
+          );
+        return;
+      } finally {
+        setCatalogLoading(false);
+      }
+    } else setDraft(createBrick(partId, color, step));
     setSelected([]);
     setMobilePanel(null);
     setTab("build");
     track("part_picked", { part_id: partId });
   }
   function restore(next: Project) {
+    partRequest.current++;
+    setClipboard([]);
     dispatch({ type: "reset", project: next });
     setSelected([]);
     setDraft(null);
@@ -218,12 +353,7 @@ export function useEditor() {
   async function openFile(file?: File) {
     if (!file) return;
     try {
-      if (file.size > MAX_FILE_SIZE)
-        throw new Error("Project is too large (16 MB maximum).");
-      const text = await file.text();
-      const parsed = /\.(ldr|mpd)$/i.test(file.name)
-        ? parseLDraw(text, file.name)
-        : parseProject(text);
+      const parsed = await readModelFile(file);
       if (parsed.bricks.some((b) => b.ldraw)) setCollision(false);
       restore(parsed);
       announce("Project opened.");
@@ -343,6 +473,14 @@ export function useEditor() {
       } else if (modifier && event.key.toLowerCase() === "d") {
         event.preventDefault();
         duplicate();
+      } else if (
+        modifier &&
+        ["c", "x", "v"].includes(event.key.toLowerCase())
+      ) {
+        event.preventDefault();
+        event.key.toLowerCase() === "v"
+          ? paste()
+          : copy(event.key.toLowerCase() === "x");
       } else if (modifier && event.key.toLowerCase() === "a") {
         event.preventDefault();
         setSelected(
@@ -351,8 +489,10 @@ export function useEditor() {
             .map((b) => b.id),
         );
       } else if (event.key === "Escape" || event.key.toLowerCase() === "v") {
+        partRequest.current++;
         setDraft(null);
         setSelected([]);
+        setBoxSelect(false);
       } else if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
         remove();
@@ -373,7 +513,7 @@ export function useEditor() {
         ].includes(event.key)
       ) {
         event.preventDefault();
-        const amount = snap ? 1 : 0.25;
+        const amount = (snap ? gridSize : 0.25) * (event.shiftKey ? 10 : 1);
         changeSelection((b) => ({
           ...b,
           x:
@@ -452,6 +592,24 @@ export function useEditor() {
     track("step_selected", { step: value });
   };
   return {
+    gridSize,
+    setGridSize,
+    boxSelect,
+    setBoxSelect,
+    selectBox,
+    libraryMode,
+    setLibraryMode,
+    catalogLoading,
+    clipboard,
+    copy,
+    paste,
+    selectMatching,
+    rotatePrecise,
+    groupSelection,
+    ungroup,
+    visibility,
+    reorderStep,
+    removeStep,
     transferring,
     sendToBuilder,
     openInBrickLink,

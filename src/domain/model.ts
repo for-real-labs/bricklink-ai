@@ -1,7 +1,7 @@
 import { parseLDraw } from "./ldraw";
 import { z } from "zod";
 import { PART_MAP, COLORS, getPart } from "./catalog";
-import { exportImportedBrick } from "./ldrawTransform";
+import { exportImportedBrick, importedTransform } from "./ldrawTransform";
 export interface Brick {
   id: string;
   partId: string;
@@ -12,6 +12,8 @@ export interface Brick {
   rotation: number;
   step: number;
   hidden: boolean;
+  group?: string;
+  bounds?: number[];
   ldraw?: {
     transform: number[];
     colorCode: string;
@@ -38,6 +40,15 @@ const brickSchema = z
     rotation: z.number().int().min(0).max(3),
     step: z.number().int().min(1).max(100),
     hidden: z.boolean(),
+    group: z.string().trim().min(1).max(80).optional(),
+    bounds: z
+      .array(z.number().finite().min(-100000).max(100000))
+      .length(6)
+      .refine(
+        (b) => b[0] <= b[3] && b[1] <= b[4] && b[2] <= b[5],
+        "Invalid part bounds",
+      )
+      .optional(),
     ldraw: z
       .object({
         transform: z
@@ -91,7 +102,54 @@ export function createBrick(partId: string, color: string, step = 1): Brick {
     hidden: false,
   };
 }
+export function brickBounds(brick: Brick) {
+  const part = getPart(brick.partId);
+  if (brick.ldraw) {
+    const m = importedTransform(brick);
+    const local = brick.bounds ?? [
+      -part.width * 10,
+      0,
+      -part.depth * 10,
+      part.width * 10,
+      part.height * 8,
+      part.depth * 10,
+    ];
+    const points = [];
+    for (const x of [local[0], local[3]])
+      for (const y of [local[1], local[4]])
+        for (const z of [local[2], local[5]])
+          points.push([
+            (m[0] + m[3] * x + m[4] * y + m[5] * z) / 20,
+            -(m[1] + m[6] * x + m[7] * y + m[8] * z) / 8,
+            (m[2] + m[9] * x + m[10] * y + m[11] * z) / 20,
+          ]);
+    return {
+      x: Math.min(...points.map((p) => p[0])),
+      y: Math.min(...points.map((p) => p[1])),
+      z: Math.min(...points.map((p) => p[2])),
+      maxX: Math.max(...points.map((p) => p[0])),
+      maxY: Math.max(...points.map((p) => p[1])),
+      maxZ: Math.max(...points.map((p) => p[2])),
+    };
+  }
+  return {
+    x: brick.x,
+    y: brick.y,
+    z: brick.z,
+    maxX: brick.x + (brick.rotation % 2 ? part.depth : part.width),
+    maxY: brick.y + part.height,
+    maxZ: brick.z + (brick.rotation % 2 ? part.width : part.depth),
+  };
+}
 export function footprint(brick: Brick) {
+  if (brick.ldraw) {
+    const bounds = brickBounds(brick);
+    return {
+      width: bounds.maxX - bounds.x,
+      depth: bounds.maxZ - bounds.z,
+      height: bounds.maxY - bounds.y,
+    };
+  }
   const part = getPart(brick.partId);
   return {
     width: brick.rotation % 2 ? part.depth : part.width,
@@ -101,16 +159,16 @@ export function footprint(brick: Brick) {
 }
 export function collides(a: Brick, b: Brick) {
   if (a.id === b.id || a.hidden || b.hidden) return false;
-  const aa = footprint(a),
-    bb = footprint(b),
+  const aa = brickBounds(a),
+    bb = brickBounds(b),
     e = 0.001;
   return (
-    a.x < b.x + bb.width - e &&
-    a.x + aa.width > b.x + e &&
-    a.z < b.z + bb.depth - e &&
-    a.z + aa.depth > b.z + e &&
-    a.y < b.y + bb.height - e &&
-    a.y + aa.height > b.y + e
+    aa.x < bb.maxX - e &&
+    aa.maxX > bb.x + e &&
+    aa.z < bb.maxZ - e &&
+    aa.maxZ > bb.z + e &&
+    aa.y < bb.maxY - e &&
+    aa.maxY > bb.y + e
   );
 }
 export function canPlace(
@@ -125,8 +183,9 @@ export function canPlace(
       !bricks.some((b) => !ignored.includes(b.id) && collides(candidate, b)))
   );
 }
-export function snap(value: number, enabled = true) {
-  return Math.round(value / (enabled ? 1 : 0.25)) * (enabled ? 1 : 0.25);
+export function snap(value: number, enabled = true, increment = 1) {
+  const size = enabled ? increment : 0.25;
+  return Math.round(value / size) * size;
 }
 export function surfaceHeight(bricks: Brick[], candidate: Brick) {
   const f = footprint(candidate);
@@ -163,7 +222,16 @@ export function exportCsv(project: Project) {
   return (
     "Part ID,Part,Color,Quantity\n" +
     inventory(project)
-      .map((r) => [r.partId, r.name, r.color, r.quantity].join(","))
+      .map((r) =>
+        [r.partId, r.name, r.color, r.quantity]
+          .map((value) => {
+            const text = String(value);
+            return /[",\n\r]/.test(text)
+              ? `"${text.replaceAll('"', '""')}"`
+              : text;
+          })
+          .join(","),
+      )
       .join("\n")
   );
 }

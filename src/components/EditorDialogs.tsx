@@ -1,3 +1,5 @@
+import { ModelCheck } from "./ModelCheck";
+import { exportMpd } from "../domain/workflows";
 import { nativeStudioLink } from "../integrations/actions";
 import {
   Box,
@@ -37,7 +39,7 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
       {modal && (
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <section
-            className={`modal ${modal === "inventory" ? "wide" : ""}`}
+            className={`modal ${modal === "inventory" || modal === "check" ? "wide" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={
@@ -49,7 +51,9 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
                     ? "Start a new project"
                     : modal === "bricklink"
                       ? "Open in BrickLink"
-                      : "Parts list"
+                      : modal === "check"
+                        ? "Check model"
+                        : "Parts list"
             }
             onClick={(e) => e.stopPropagation()}
           >
@@ -60,6 +64,7 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
             >
               <X size={18} />
             </Button>
+            {modal === "check" && <ModelCheck editor={editor} />}
             {modal === "help" && (
               <>
                 <span className="eyebrow">BRICKBUILDER STUDIO</span>
@@ -72,6 +77,9 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
                 <div className="shortcut-grid">
                   {[
                     ["R", "Rotate 90°"],
+                    ["⌘ / Ctrl + C / X / V", "Copy / cut / paste"],
+                    ["Box tool + drag", "Box select"],
+                    ["Alt + click in model list", "Select part inside group"],
                     ["M", "Move selection"],
                     ["Esc", "Cancel placement"],
                     ["⌘ / Ctrl + D", "Duplicate"],
@@ -148,6 +156,26 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
                   in real life.
                 </p>
                 <div className="export-options">
+                  <button
+                    onClick={() => {
+                      download(
+                        exportMpd(project),
+                        `${safeName}.mpd`,
+                        "text/plain",
+                      );
+                      setModal(null);
+                      track("exported", { format: "mpd" });
+                    }}
+                  >
+                    <Box />
+                    <span>
+                      <strong>Submodels / MPD</strong>
+                      <small>
+                        Named assemblies and build steps for native Studio
+                      </small>
+                    </span>
+                    <Download size={17} />
+                  </button>
                   <button
                     onClick={() => {
                       save();
@@ -270,7 +298,7 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
                 {!window.brickbuilderStudioDesktop && (
                   <p className="fine-print">
                     <a
-                      href="https://github.com/for-real-labs/bricklink-ai/releases/tag/v0.2.0"
+                      href="https://github.com/for-real-labs/bricklink-ai/releases/tag/v0.3.0"
                       target="_blank"
                       rel="noreferrer"
                       onClick={() => track("desktop_download_clicked")}

@@ -36,6 +36,24 @@ export function EditorMenu({ editor }: { editor: Editor }) {
     ],
     Edit: [
       {
+        label: "Copy",
+        shortcut: "⌘C",
+        disabled: !editor.first,
+        action: () => editor.copy(),
+      },
+      {
+        label: "Cut",
+        shortcut: "⌘X",
+        disabled: !editor.first,
+        action: () => editor.copy(true),
+      },
+      {
+        label: "Paste",
+        shortcut: "⌘V",
+        disabled: !editor.clipboard.length,
+        action: () => editor.paste(),
+      },
+      {
         label: "Undo",
         shortcut: "⌘Z",
         disabled: !editor.history.past.length,
@@ -61,21 +79,34 @@ export function EditorMenu({ editor }: { editor: Editor }) {
       },
     ],
     Model: [
+      { label: "Check model…", action: () => editor.setModal("check") },
+      {
+        label: "Select same part type",
+        disabled: !editor.first,
+        action: () => editor.selectMatching("type"),
+      },
+      {
+        label: "Select same color",
+        disabled: !editor.first,
+        action: () => editor.selectMatching("color"),
+      },
+      {
+        label: "Isolate selection",
+        disabled: !editor.first,
+        action: () => editor.visibility("isolate"),
+      },
       {
         label: "Select all parts",
         action: () =>
-          editor.setSelected(editor.project.bricks.map((brick) => brick.id)),
+          editor.setSelected(
+            editor.project.bricks
+              .filter((brick) => !brick.hidden && brick.step <= editor.step)
+              .map((brick) => brick.id),
+          ),
       },
       {
         label: "Show all parts",
-        action: () =>
-          editor.commit({
-            ...editor.project,
-            bricks: editor.project.bricks.map((brick) => ({
-              ...brick,
-              hidden: false,
-            })),
-          }),
+        action: () => editor.visibility("show"),
       },
       { label: "Parts list…", action: () => editor.setModal("inventory") },
     ],

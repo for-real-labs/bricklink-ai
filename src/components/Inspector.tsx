@@ -1,3 +1,4 @@
+import { SelectionTools } from "./SelectionTools";
 import {
   Box,
   ChevronDown,
@@ -89,6 +90,24 @@ export function Inspector({ editor }: { editor: Editor }) {
           </button>
         ))}
       </div>
+      {(editor.clipboard.length > 0 ||
+        project.bricks.some((b) => b.hidden)) && (
+        <div className="inspector-quick-actions">
+          {editor.clipboard.length > 0 && (
+            <Button label="Paste copied parts" onClick={() => editor.paste()}>
+              Paste {editor.clipboard.length} parts
+            </Button>
+          )}
+          {project.bricks.some((b) => b.hidden) && (
+            <Button
+              label="Restore hidden parts"
+              onClick={() => editor.visibility("show")}
+            >
+              Show all parts
+            </Button>
+          )}
+        </div>
+      )}
       <div className="inspector-tabs">
         <Button
           label="Model parts"
@@ -122,13 +141,26 @@ export function Inspector({ editor }: { editor: Editor }) {
               >
                 <button
                   aria-label={`Select ${getPart(brick.partId).name} ${index + 1}`}
-                  onClick={(e) => select(brick.id, e.shiftKey)}
+                  onClick={(e) =>
+                    select(
+                      brick.id,
+                      e.shiftKey || e.metaKey || e.ctrlKey,
+                      e.altKey,
+                    )
+                  }
                 >
                   <span
                     className="mini-brick"
                     style={{ background: brick.color }}
                   />
-                  <span>{getPart(brick.partId).name}</span>
+                  <span
+                    title={brick.group ? `Submodel: ${brick.group}` : undefined}
+                  >
+                    {brick.group && (
+                      <em className="group-badge">{brick.group}</em>
+                    )}
+                    {getPart(brick.partId).name}
+                  </span>
                   <small>{brick.step}</small>
                 </button>
                 <Button
@@ -171,6 +203,32 @@ export function Inspector({ editor }: { editor: Editor }) {
                 </button>
               ))}
             </div>
+            <div className="step-actions">
+              <Button
+                label="Move step earlier"
+                disabled={step <= 1}
+                onClick={() => editor.reorderStep(-1)}
+              >
+                ↑ Earlier
+              </Button>
+              <Button
+                label="Move step later"
+                disabled={step >= project.steps}
+                onClick={() => editor.reorderStep(1)}
+              >
+                ↓ Later
+              </Button>
+              <Button
+                label="Delete current step"
+                disabled={project.steps <= 1}
+                onClick={editor.removeStep}
+              >
+                Delete step
+              </Button>
+            </div>
+            <p className="step-note">
+              Deleting a step keeps its parts in the adjacent step.
+            </p>
             <Button
               label="Add build step"
               disabled={project.steps >= 100}
@@ -214,8 +272,8 @@ export function Inspector({ editor }: { editor: Editor }) {
                   <input
                     aria-label={`Position ${axis.toUpperCase()}`}
                     type="number"
-                    step={snap ? 1 : 0.25}
-                    value={first[axis]}
+                    step={snap ? editor.gridSize : 0.25}
+                    value={Number(first[axis].toFixed(3))}
                     onChange={(e) => {
                       const value = Number(e.target.value);
                       if (Number.isFinite(value))
@@ -247,6 +305,7 @@ export function Inspector({ editor }: { editor: Editor }) {
                 ))}
               </select>
             </label>
+            <SelectionTools editor={editor} />
             <div className="selection-actions">
               <Button
                 label="Lower selection"

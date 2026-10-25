@@ -106,3 +106,10 @@ export async function importedMesh(
   }
   return group;
 }
+
+export async function measurePart(partId: string): Promise<number[]> {
+  const mesh = await template(partId, "16");
+  const box = new THREE.Box3().setFromObject(mesh);
+  if (box.isEmpty()) throw new Error("No geometry is available for this part.");
+  return [...box.min.toArray(), ...box.max.toArray()];
+}

@@ -65,13 +65,15 @@ export function parseLDraw(text: string, name = "Imported model"): Project {
     if (color) colors.set(color[1], color[2]);
   }
   const bricks: Brick[] = [];
-  let maxStep = 1;
+  let maxStep = 1,
+    groupIndex = 0;
   const visit = (
     lines: string[],
     parent: number[],
     inherited: string,
     stack: Set<string>,
     inheritedStep = 1,
+    group?: string,
   ) => {
     let step = inheritedStep;
     for (const line of lines) {
@@ -104,6 +106,8 @@ export function parseLDraw(text: string, name = "Imported model"): Project {
           color,
           new Set([...stack, file]),
           step,
+          group ??
+            `${file.replace(/\.(ldr|mpd)$/i, "").slice(0, 55)} ${++groupIndex}`,
         );
       } else {
         if (!/^[a-z0-9][a-z0-9_-]{0,79}\.dat$/i.test(file))
@@ -123,6 +127,7 @@ export function parseLDraw(text: string, name = "Imported model"): Project {
           x,
           y,
           z,
+          ...(group ? { group } : {}),
           ldraw: {
             transform,
             colorCode: color,

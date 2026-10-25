@@ -1,8 +1,11 @@
+import { useState } from "react";
+import { track } from "./analytics";
 import {
   Sparkles,
   ShoppingBag,
   ExternalLink,
   Box,
+  Scan,
   Camera,
   EyeOff,
   Home,
@@ -43,6 +46,7 @@ import { EditorDialogs } from "./components/EditorDialogs";
 import { EditorMenu } from "./components/EditorMenu";
 export default function App() {
   const editor = useEditor();
+  const [draggingFile, setDraggingFile] = useState(false);
   const {
     history,
     project,
@@ -83,7 +87,32 @@ export default function App() {
     changeStep,
   } = editor;
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${draggingFile ? "file-dragging" : ""}`}
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes("Files")) {
+          event.preventDefault();
+          setDraggingFile(true);
+        }
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node))
+          setDraggingFile(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDraggingFile(false);
+        if (event.dataTransfer.files.length === 1) {
+          void openFile(event.dataTransfer.files[0]);
+          track("model_dropped");
+        } else announce("Drop one .io, .ldr, .mpd, or project file at a time.");
+      }}
+    >
+      {draggingFile && (
+        <div className="drop-overlay">
+          Open model · .io / .ldr / .mpd / .json
+        </div>
+      )}
       <header className="app-header">
         <div className="header-brand-menu">
           <a
@@ -180,11 +209,25 @@ export default function App() {
           <i className="divider" />
           <Button
             label="Select (V)"
-            active={!draft}
-            onClick={() => setDraft(null)}
+            active={!draft && !editor.boxSelect}
+            onClick={() => {
+              setDraft(null);
+              editor.setBoxSelect(false);
+            }}
           >
             <MousePointer2 size={18} />
             <span>Select</span>
+          </Button>
+          <Button
+            label="Box select"
+            active={editor.boxSelect}
+            onClick={() => {
+              setDraft(null);
+              editor.setBoxSelect(!editor.boxSelect);
+            }}
+          >
+            <Scan size={17} />
+            <span>Box</span>
           </Button>
           <Button
             label="Move selected (M)"
@@ -210,16 +253,7 @@ export default function App() {
           <Button
             label="Hide selection"
             disabled={!first}
-            onClick={() =>
-              commit({
-                ...project,
-                bricks: project.bricks.map((brick) =>
-                  selected.includes(brick.id)
-                    ? { ...brick, hidden: !brick.hidden }
-                    : brick,
-                ),
-              })
-            }
+            onClick={() => editor.visibility("hide")}
           >
             <EyeOff size={17} />
             <span>Hide</span>
@@ -238,6 +272,22 @@ export default function App() {
             <Magnet size={16} />
             <span>Snap</span>
           </Button>
+          <label className="grid-size">
+            <select
+              aria-label="Grid increment"
+              value={editor.gridSize}
+              onChange={(event) => {
+                editor.setGridSize(Number(event.target.value));
+                track("grid_increment_changed", {
+                  increment: Number(event.target.value),
+                });
+              }}
+            >
+              <option value="1">1 stud</option>
+              <option value="0.5">½ stud</option>
+              <option value="0.25">¼ stud</option>
+            </select>
+          </label>
           <Button
             label="Collision detection"
             active={collision}
@@ -256,6 +306,10 @@ export default function App() {
           </Button>
         </div>
         <div className="mode-tabs">
+          <Button label="Check model" onClick={() => setModal("check")}>
+            <ShieldCheck size={17} />
+            <span>Check</span>
+          </Button>
           <Button label="Capture model image" onClick={editor.exportImage}>
             <Camera size={18} />
             <span>Render</span>
@@ -321,6 +375,9 @@ export default function App() {
             selected={selected}
             draft={draft}
             snap={snap}
+            gridSize={editor.gridSize}
+            boxSelect={editor.boxSelect}
+            onSelectBox={editor.selectBox}
             collision={collision}
             grid={grid}
             step={step}
@@ -384,7 +441,10 @@ export default function App() {
                   : "Place"}{" "}
                 {getPart(draft.partId).name}
               </strong>
-              <span>Click to place · R to rotate</span>
+              <span>
+                Click to place · R to rotate
+                {selected.length > 1 ? ` · ${selected.length} parts` : ""}
+              </span>
               <Button label="Cancel placement" onClick={() => setDraft(null)}>
                 <X size={15} />
               </Button>
@@ -470,7 +530,7 @@ export default function App() {
           {window.brickbuilderStudioDesktop
             ? "DESKTOP WORKSPACE"
             : "WEB WORKSPACE"}
-          <span className="version">v0.2</span>
+          <span className="version">v0.3</span>
         </span>
       </footer>
       <nav className="mobile-nav">
@@ -498,7 +558,7 @@ export default function App() {
       <input
         ref={fileInput}
         type="file"
-        accept=".json,.brickbuilder.json,.ldr,.mpd"
+        accept=".json,.brickbuilder.json,.ldr,.mpd,.io"
         aria-label="Import project file"
         hidden
         onChange={(e) => void openFile(e.target.files?.[0])}

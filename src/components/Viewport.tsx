@@ -1,3 +1,4 @@
+import { idsInRectangle } from "../scene/selection";
 import {
   forwardRef,
   useEffect,
@@ -11,7 +12,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { buildBrick, disposeObject, PLATE_HEIGHT } from "../scene/geometry";
 import {
   canPlace,
-  footprint,
+  brickBounds,
   snap as snapValue,
   type Brick,
 } from "../domain/model";
@@ -27,10 +28,13 @@ interface Props {
   selected: string[];
   draft: Brick | null;
   snap: boolean;
+  gridSize: number;
+  boxSelect: boolean;
   collision: boolean;
   grid: boolean;
   step: number;
   onSelect: (id: string | null, multiple: boolean) => void;
+  onSelectBox: (ids: string[], additive: boolean) => void;
   onPlace: (brick: Brick) => void;
   onError: (message: string) => void;
 }
@@ -52,6 +56,12 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       rebuild: () => void;
     } | null>(null);
     const [failed, setFailed] = useState(false);
+    const [selectionRect, setSelectionRect] = useState<{
+      left: number;
+      top: number;
+      width: number;
+      height: number;
+    } | null>(null);
     const frame = () => {
       const e = engine.current;
       if (!e) return;
@@ -187,9 +197,23 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         candidate: null as Brick | null,
         rebuild: () => {},
       };
+      let renderDirty = true;
+      const changed = () => {
+        renderDirty = true;
+      };
+      controls.addEventListener("change", changed);
       let revision = 0;
+      let ghostRevision = 0;
+      const movingIds = () =>
+        latest.current.draft &&
+        latest.current.bricks.some((b) => b.id === latest.current.draft!.id)
+          ? latest.current.selected.includes(latest.current.draft.id)
+            ? latest.current.selected
+            : [latest.current.draft.id]
+          : [];
       let previousIds = "";
       e.rebuild = () => {
+        renderDirty = true;
         const currentRevision = ++revision;
         const ids = latest.current.bricks.map((b) => b.id).join(",");
         const shouldFrame = ids !== previousIds;
@@ -199,9 +223,10 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
             b.ldraw &&
             !b.hidden &&
             b.step <= latest.current.step &&
-            b.id !== latest.current.draft?.id,
+            !movingIds().includes(b.id),
         ).length;
         const loaded = () => {
+          renderDirty = true;
           pending--;
           if (pending === 0 && shouldFrame) frame();
         };
@@ -212,7 +237,11 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         }
         const p = latest.current;
         for (const brick of p.bricks)
-          if (!brick.hidden && brick.step <= p.step && brick.id !== p.draft?.id)
+          if (
+            !brick.hidden &&
+            brick.step <= p.step &&
+            !movingIds().includes(brick.id)
+          )
             if (brick.ldraw) {
               void importedMesh(brick, p.selected.includes(brick.id), false)
                 .then((mesh) => {
@@ -234,7 +263,9 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
                 });
             } else model.add(buildBrick(brick, p.selected.includes(brick.id)));
         grid.visible = p.grid;
-        controls.mouseButtons.LEFT = p.draft ? null : THREE.MOUSE.ROTATE;
+        controls.mouseButtons.LEFT =
+          p.draft || p.boxSelect ? null : THREE.MOUSE.ROTATE;
+        ghostRevision++;
         if (e.ghost) {
           scene.remove(e.ghost);
           disposeObject(e.ghost);
@@ -266,41 +297,128 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       }
       function move(event: PointerEvent) {
         const p = latest.current;
+        if (p.boxSelect && selecting) {
+          const rect = el.getBoundingClientRect();
+          setSelectionRect({
+            left: Math.min(down.x, event.clientX) - rect.left,
+            top: Math.min(down.y, event.clientY) - rect.top,
+            width: Math.abs(event.clientX - down.x),
+            height: Math.abs(event.clientY - down.y),
+          });
+          return;
+        }
         if (!p.draft) return;
         const hits = cast(event);
         const hit = hits[0];
         const target = hit
           ? p.bricks.find((b) => b.id === brickId(hit.object))
           : undefined;
-        const y = target ? target.y + footprint(target).height : 0;
+        const y = target ? brickBounds(target).maxY : 0;
         plane.constant = -y * PLATE_HEIGHT;
         const point = raycaster.ray.intersectPlane(plane, new THREE.Vector3());
         if (!point) return;
-        const f = footprint(p.draft),
-          candidate = {
-            ...p.draft,
-            x: snapValue(point.x - f.width / 2, p.snap),
-            z: snapValue(point.z - f.depth / 2, p.snap),
-            y,
-          };
+        const moving = p.bricks.filter((b) => movingIds().includes(b.id));
+        const originals = moving.length ? moving : [p.draft];
+        const bounds = originals.map(brickBounds);
+        const minX = Math.min(...bounds.map((b) => b.x)),
+          minY = Math.min(...bounds.map((b) => b.y)),
+          minZ = Math.min(...bounds.map((b) => b.z));
+        const width = Math.max(...bounds.map((b) => b.maxX)) - minX,
+          depth = Math.max(...bounds.map((b) => b.maxZ)) - minZ;
+        const candidate = {
+          ...p.draft,
+          x:
+            snapValue(point.x - width / 2, p.snap, p.gridSize) +
+            p.draft.x -
+            minX,
+          z:
+            snapValue(point.z - depth / 2, p.snap, p.gridSize) +
+            p.draft.z -
+            minZ,
+          y: y + p.draft.y - minY,
+        };
         e.candidate = candidate;
         if (e.ghost) {
           scene.remove(e.ghost);
           disposeObject(e.ghost);
         }
-        e.ghost = buildBrick(
-          candidate,
-          false,
-          true,
-          canPlace(p.bricks, candidate, p.collision),
-        );
+        const token = ++ghostRevision;
+        e.ghost = new THREE.Group();
         scene.add(e.ghost);
+        renderDirty = true;
+        const ghost = e.ghost;
+        for (const original of originals) {
+          const item = {
+            ...original,
+            x: original.x + candidate.x - p.draft.x,
+            y: original.y + candidate.y - p.draft.y,
+            z: original.z + candidate.z - p.draft.z,
+            ...(original.id === candidate.id
+              ? { rotation: candidate.rotation }
+              : {}),
+          };
+          const valid = canPlace(p.bricks, item, p.collision, movingIds());
+          if (!item.ldraw) ghost.add(buildBrick(item, false, true, valid));
+          else
+            void importedMesh(item, false, true)
+              .then((mesh) => {
+                if (engine.current !== e || token !== ghostRevision) {
+                  disposeObject(mesh);
+                  return;
+                }
+                if (!valid)
+                  mesh.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                      const materials = Array.isArray(child.material)
+                        ? child.material
+                        : [child.material];
+                      for (const material of materials)
+                        if ("color" in material)
+                          (material as THREE.MeshStandardMaterial).color.set(
+                            "#ef4444",
+                          );
+                    }
+                  });
+                ghost.add(mesh);
+                renderDirty = true;
+              })
+              .catch(() => {
+                if (token === ghostRevision) {
+                  ghost.add(buildBrick(item, false, true, valid));
+                  renderDirty = true;
+                }
+              });
+        }
       }
       let down = { x: 0, y: 0 };
+      let selecting = false;
       const pointerDown = (event: PointerEvent) => {
         down = { x: event.clientX, y: event.clientY };
+        if (
+          event.button === 0 &&
+          latest.current.boxSelect &&
+          !latest.current.draft
+        ) {
+          selecting = true;
+          renderer.domElement.setPointerCapture(event.pointerId);
+        }
       };
       const pointerUp = (event: PointerEvent) => {
+        if (selecting) {
+          selecting = false;
+          setSelectionRect(null);
+          const rect = el.getBoundingClientRect();
+          if (!latest.current.boxSelect) return;
+          const ids = idsInRectangle(model.children, camera, rect, down, {
+            x: event.clientX,
+            y: event.clientY,
+          });
+          latest.current.onSelectBox(
+            ids,
+            event.shiftKey || event.metaKey || event.ctrlKey,
+          );
+          return;
+        }
         if (
           event.button !== 0 ||
           Math.hypot(event.clientX - down.x, event.clientY - down.y) > 5
@@ -310,7 +428,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         if (p.draft) {
           move(event);
           if (e.candidate) {
-            if (canPlace(p.bricks, e.candidate, p.collision))
+            if (canPlace(p.bricks, e.candidate, p.collision, movingIds()))
               p.onPlace(e.candidate);
             else p.onError("That space is occupied. Try another position.");
           }
@@ -318,9 +436,13 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
           const hit = cast(event)[0];
           p.onSelect(
             hit ? (brickId(hit.object) ?? null) : null,
-            event.shiftKey,
+            event.shiftKey || event.metaKey || event.ctrlKey,
           );
         }
+      };
+      const pointerCancel = () => {
+        selecting = false;
+        setSelectionRect(null);
       };
       const lost = () => {
         setFailed(true);
@@ -332,6 +454,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       renderer.domElement.addEventListener("pointermove", move);
       renderer.domElement.addEventListener("pointerdown", pointerDown);
       renderer.domElement.addEventListener("pointerup", pointerUp);
+      renderer.domElement.addEventListener("pointercancel", pointerCancel);
       const resize = new ResizeObserver(() => {
         const w = el.clientWidth,
           h = el.clientHeight;
@@ -345,18 +468,23 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       const render = () => {
         animation = requestAnimationFrame(render);
         controls.update();
-        renderer.render(scene, camera);
+        if (renderDirty) {
+          renderer.render(scene, camera);
+          renderDirty = false;
+        }
       };
       render();
       frame();
       return () => {
         cancelAnimationFrame(animation);
         resize.disconnect();
+        controls.removeEventListener("change", changed);
         controls.dispose();
         renderer.domElement.removeEventListener("webglcontextlost", lost);
         renderer.domElement.removeEventListener("pointermove", move);
         renderer.domElement.removeEventListener("pointerdown", pointerDown);
         renderer.domElement.removeEventListener("pointerup", pointerUp);
+        renderer.domElement.removeEventListener("pointercancel", pointerCancel);
         disposeObject(scene);
         renderer.dispose();
         el.removeChild(renderer.domElement);
@@ -374,13 +502,23 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       props.step,
       props.collision,
       props.snap,
+      props.gridSize,
+      props.boxSelect,
     ]);
     return (
       <div
         ref={container}
-        className={`viewport ${props.draft ? "placing" : ""}`}
+        className={`viewport ${props.draft || props.boxSelect ? "placing" : ""}`}
         data-testid="viewport"
       >
+        {selectionRect && (
+          <div className="selection-rectangle" style={selectionRect} />
+        )}
+        {props.boxSelect && (
+          <div className="box-select-hint">
+            Drag a box · Shift adds to selection
+          </div>
+        )}
         {failed && (
           <div className="graphics-error">
             WebGL is unavailable. Enable hardware acceleration to use the 3D
