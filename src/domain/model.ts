@@ -142,7 +142,7 @@ export function exportCsv(project: Project) {
 }
 export function exportLDraw(project: Project) {
   const lines = [
-    "0 Bricklink AI model",
+    "0 BrickBuilder Studio model",
     "0 Generated from original procedural part approximations",
   ];
   let lastStep = 1;

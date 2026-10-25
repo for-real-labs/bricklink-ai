@@ -1,5 +1,5 @@
 {
-  "name": "bricklink-ai",
+  "name": "brickbuilder-studio",
   "version": "0.1.0",
   "private": true,
   "description": "An independent 3D brick building workspace for web and desktop",
@@ -21,8 +21,8 @@
     "format": "prettier --write src tests electron *.ts *.json *.html .github/workflows/*.yml"
   },
   "build": {
-    "appId": "com.forreallabs.bricklinkai",
-    "productName": "Bricklink AI",
+    "appId": "ai.brickbuilder.studio",
+    "productName": "BrickBuilder Studio",
     "directories": {
       "output": "release"
     },

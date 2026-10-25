@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { forwardRef, useImperativeHandle } from "react";
 import type { Brick } from "../src/domain/model";
-import { emptyProject } from "../src/domain/model";
+import { createBrick, emptyProject } from "../src/domain/model";
 vi.mock("../src/analytics", () => ({ track: vi.fn() }));
 vi.mock("../src/components/Viewport", () => ({
   Viewport: forwardRef(function FakeViewport(
@@ -29,12 +29,13 @@ vi.mock("../src/components/Viewport", () => ({
   }),
 }));
 import App from "../src/App";
-beforeEach(() =>
+beforeEach(() => {
+  localStorage.clear();
   localStorage.setItem(
-    "bricklink-ai.project.v1",
+    "brickbuilder-studio.project.v1",
     JSON.stringify(emptyProject()),
-  ),
-);
+  );
+});
 describe("editor interactions", () => {
   it("searches, places, recolors, undoes, and restores from autosave", async () => {
     const user = userEvent.setup();
@@ -50,13 +51,13 @@ describe("editor interactions", () => {
     await user.click(screen.getByRole("button", { name: "Cancel placement" }));
     await user.click(screen.getByRole("button", { name: "Color Blue" }));
     expect(
-      JSON.parse(localStorage.getItem("bricklink-ai.project.v1")!).bricks[0]
-        .color,
+      JSON.parse(localStorage.getItem("brickbuilder-studio.project.v1")!)
+        .bricks[0].color,
     ).toBe("#4c78ba");
     await user.click(screen.getByRole("button", { name: "Undo (⌘Z)" }));
     expect(
-      JSON.parse(localStorage.getItem("bricklink-ai.project.v1")!).bricks[0]
-        .color,
+      JSON.parse(localStorage.getItem("brickbuilder-studio.project.v1")!)
+        .bricks[0].color,
     ).toBe("#c85c42");
     unmount();
     render(<App />);
@@ -75,12 +76,16 @@ describe("editor interactions", () => {
     await user.click(screen.getByRole("button", { name: "Duplicate (⌘D)" }));
     fireEvent.keyDown(window, { key: "ArrowRight" });
     fireEvent.keyDown(window, { key: "r" });
-    let project = JSON.parse(localStorage.getItem("bricklink-ai.project.v1")!);
+    let project = JSON.parse(
+      localStorage.getItem("brickbuilder-studio.project.v1")!,
+    );
     expect(project.bricks).toHaveLength(2);
     expect(project.bricks[1].x).toBe(16);
     expect(project.bricks[1].rotation).toBe(1);
     await user.click(screen.getByRole("button", { name: "Delete selection" }));
-    project = JSON.parse(localStorage.getItem("bricklink-ai.project.v1")!);
+    project = JSON.parse(
+      localStorage.getItem("brickbuilder-studio.project.v1")!,
+    );
     expect(project.bricks).toHaveLength(1);
   });
   it("creates and navigates build steps", async () => {
@@ -135,5 +140,60 @@ describe("editor interactions", () => {
     expect(
       screen.getByRole("complementary", { name: "Parts library" }),
     ).toHaveClass("mobile-open");
+  });
+});
+
+describe("Studio menus and project compatibility", () => {
+  it("preserves an existing autosave when moving to the Studio storage key", () => {
+    localStorage.clear();
+    const project = {
+      ...emptyProject(),
+      name: "Existing build",
+      bricks: [createBrick("3001", "#c85c42")],
+    };
+    localStorage.setItem("bricklink-ai.project.v1", JSON.stringify(project));
+    render(<App />);
+    expect(screen.getByLabelText("Project name")).toHaveValue("Existing build");
+    expect(
+      JSON.parse(localStorage.getItem("brickbuilder-studio.project.v1")!),
+    ).toEqual(project);
+  });
+  it("runs menu commands, shows hidden parts, and closes menus with Escape", async () => {
+    const user = userEvent.setup();
+    const project = {
+      ...emptyProject(),
+      bricks: [{ ...createBrick("3001", "#c85c42"), hidden: true }],
+    };
+    localStorage.setItem(
+      "brickbuilder-studio.project.v1",
+      JSON.stringify(project),
+    );
+    render(<App />);
+    await user.click(
+      screen.getByRole("button", { name: "Model" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Show all parts" }));
+    expect(
+      JSON.parse(localStorage.getItem("brickbuilder-studio.project.v1")!)
+        .bricks[0].hidden,
+    ).toBe(false);
+    expect(
+      screen.queryByRole("button", { name: "Show all parts" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "File" }));
+    await user.keyboard("{Escape}");
+    expect(
+      screen.getByRole("button", { name: "File" }),
+    ).toHaveFocus();
+    expect(
+      screen.queryByRole("button", { name: "New model…" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Help" }));
+    await user.click(
+      screen.getByRole("button", { name: "BrickBuilder Studio help" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Getting started" }),
+    ).toBeInTheDocument();
   });
 });

@@ -1,6 +1,8 @@
 # Studio reference and design decisions
 
-Reviewed October 25, 2026. BrickLink Studio was opened on the development Mac. It displayed an update prompt for Studio 2.26.9_1; the native app did not respond to automated dismissal. No update or preference change was made. The working interaction reference came from the official documentation below.
+Reviewed October 25, 2026. BrickLink Studio was opened on the development Mac. After its update prompt was dismissed, Command-N opened an empty model for direct visual inspection. The dark build interface informed the charcoal chrome, compact icon-and-label toolbar, document strip, category tree and part grid on the left, and color/step panels on the right. Arial/Helvetica/system fonts approximate the native typography; no proprietary fonts or assets are bundled. The BrickBuilder wordmark follows the existing website’s uppercase, heavy system font with red BRICK and light BUILDER, plus a lighter gray studio label.
+
+[Build mode interface reference](https://studiohelp.bricklink.com/hc/en-us/articles/5406574588823-Build-mode-interface).
 
 | Official reference | Implemented interpretation |
 | --- | --- |

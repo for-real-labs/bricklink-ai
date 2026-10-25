@@ -1,6 +1,8 @@
 import {
   Box,
-  ChevronDown,
+  Camera,
+  EyeOff,
+  Home,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -35,6 +37,7 @@ import { useEditor } from "./useEditor";
 import { PartsLibrary } from "./components/PartsLibrary";
 import { Inspector } from "./components/Inspector";
 import { EditorDialogs } from "./components/EditorDialogs";
+import { EditorMenu } from "./components/EditorMenu";
 export default function App() {
   const editor = useEditor();
   const {
@@ -79,37 +82,19 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <a
-          className="brand"
-          href="#"
-          onClick={(e) => e.preventDefault()}
-          aria-label="Bricklink AI home"
-        >
-          <span className="brand-mark">
-            <Box size={22} />
-          </span>
-          <strong>
-            bricklink<span>ai</span>
-          </strong>
-          <span className="beta">STUDIO</span>
-        </a>
-        <div className="document-title">
-          <input
-            aria-label="Project name"
-            value={project.name}
-            maxLength={80}
-            onChange={(e) => {
-              if (e.target.value.trim())
-                commit({ ...project, name: e.target.value });
-            }}
-          />
-          <ChevronDown size={13} />
-          <span
-            className={`saved-dot ${saved ? "" : "unsaved"}`}
-            title={
-              saved ? "Saved on this device" : "Save a file to keep your work"
-            }
-          />
+        <div className="header-brand-menu">
+          <a
+            className="brand"
+            href="#"
+            onClick={(e) => e.preventDefault()}
+            aria-label="BrickBuilder Studio home"
+          >
+            <strong>
+              <span>BRICK</span>BUILDER
+            </strong>
+            <span className="studio-wordmark">studio</span>
+          </a>
+          <EditorMenu editor={editor} />
         </div>
         <div className="header-actions">
           <Button label="New project" onClick={() => setModal("new")}>
@@ -136,30 +121,6 @@ export default function App() {
         </div>
       </header>
       <nav className="workspace-toolbar" aria-label="Building tools">
-        <div className="mode-tabs">
-          <Button
-            label="Build mode"
-            active={tab === "build"}
-            onClick={() => {
-              setTab("build");
-              changeStep(project.steps);
-            }}
-          >
-            <Box size={16} />
-            Build
-          </Button>
-          <Button
-            label="Instructions mode"
-            active={tab === "instructions"}
-            onClick={() => {
-              setTab("instructions");
-              changeStep(1);
-            }}
-          >
-            <BookOpen size={16} />
-            <span>Instructions</span>
-          </Button>
-        </div>
         <div className="editing-tools">
           <Button
             label="Undo (⌘Z)"
@@ -167,6 +128,7 @@ export default function App() {
             onClick={undo}
           >
             <Undo2 size={17} />
+            <span>Undo</span>
           </Button>
           <Button
             label="Redo (⇧⌘Z)"
@@ -174,6 +136,7 @@ export default function App() {
             onClick={redo}
           >
             <Redo2 size={17} />
+            <span>Redo</span>
           </Button>
           <i className="divider" />
           <Button
@@ -182,6 +145,7 @@ export default function App() {
             onClick={() => setDraft(null)}
           >
             <MousePointer2 size={18} />
+            <span>Select</span>
           </Button>
           <Button
             label="Move selected (M)"
@@ -190,6 +154,7 @@ export default function App() {
             onClick={() => first && setDraft({ ...first })}
           >
             <Move3D size={18} />
+            <span>Move</span>
           </Button>
           <Button
             label="Rotate 90° (R)"
@@ -197,12 +162,32 @@ export default function App() {
             onClick={rotate}
           >
             <RotateCw size={17} />
+            <span>Rotate</span>
           </Button>
           <Button label="Duplicate (⌘D)" disabled={!first} onClick={duplicate}>
             <Copy size={17} />
+            <span>Clone</span>
+          </Button>
+          <Button
+            label="Hide selection"
+            disabled={!first}
+            onClick={() =>
+              commit({
+                ...project,
+                bricks: project.bricks.map((brick) =>
+                  selected.includes(brick.id)
+                    ? { ...brick, hidden: !brick.hidden }
+                    : brick,
+                ),
+              })
+            }
+          >
+            <EyeOff size={17} />
+            <span>Hide</span>
           </Button>
           <Button label="Delete selection" disabled={!first} onClick={remove}>
             <Trash2 size={17} />
+            <span>Delete</span>
           </Button>
         </div>
         <div className="scene-tools">
@@ -228,9 +213,65 @@ export default function App() {
             onClick={() => setGrid(!grid)}
           >
             <Grid2X2 size={16} />
+            <span>Grid</span>
+          </Button>
+        </div>
+        <div className="mode-tabs">
+          <Button label="Capture model image" onClick={editor.exportImage}>
+            <Camera size={18} />
+            <span>Render</span>
+          </Button>
+
+          <Button
+            label="Build mode"
+            active={tab === "build"}
+            onClick={() => {
+              setTab("build");
+              changeStep(project.steps);
+            }}
+          >
+            <Box size={16} />
+            Build
+          </Button>
+          <Button
+            label="Instructions mode"
+            active={tab === "instructions"}
+            onClick={() => {
+              setTab("instructions");
+              changeStep(1);
+            }}
+          >
+            <BookOpen size={16} />
+            <span>Instructions</span>
           </Button>
         </div>
       </nav>
+      <div className="document-bar">
+        <Home size={15} aria-hidden="true" />
+        <div className="document-title">
+          <input
+            aria-label="Project name"
+            value={project.name}
+            maxLength={80}
+            onChange={(e) => {
+              if (e.target.value.trim())
+                commit({ ...project, name: e.target.value });
+            }}
+          />
+          <span
+            className={`saved-dot ${saved ? "" : "unsaved"}`}
+            title={
+              saved ? "Saved on this device" : "Save a file to keep your work"
+            }
+          />
+        </div>
+        <Button label="New model tab" onClick={() => setModal("new")}>
+          <Plus size={16} />
+        </Button>
+        <span className="document-mode">
+          {tab === "build" ? "Build mode" : "Instruction mode"}
+        </span>
+      </div>
       <main className="workspace">
         <PartsLibrary editor={editor} />
         <section className="canvas-panel" aria-label="Build area">
@@ -252,7 +293,7 @@ export default function App() {
               <span className="live-dot" />
               {tab === "instructions"
                 ? `BUILD GUIDE · STEP ${step}`
-                : "YOUR BUILDING SPACE"}
+                : "PERSPECTIVE"}
             </span>
             <Button label="Keyboard shortcuts" onClick={() => setModal("help")}>
               <CircleHelp size={18} />
@@ -314,7 +355,7 @@ export default function App() {
               <span className="welcome-icon">
                 <Box size={28} />
               </span>
-              <h1>Big ideas start small.</h1>
+              <h1>Untitled model</h1>
               <p>
                 Pick a part from the library,
                 <br />
@@ -333,7 +374,7 @@ export default function App() {
           {tab === "instructions" && (
             <div className="instruction-card">
               <div>
-                <span>BUILD IT, BRICK BY BRICK</span>
+                <span>BUILDING INSTRUCTIONS</span>
                 <h2>
                   Step {String(step).padStart(2, "0")}{" "}
                   <small>/ {String(project.steps).padStart(2, "0")}</small>
@@ -386,7 +427,9 @@ export default function App() {
           {project.steps} steps
         </span>
         <span>
-          {window.bricklinkDesktop ? "DESKTOP WORKSPACE" : "WEB WORKSPACE"}
+          {window.brickbuilderStudioDesktop
+            ? "DESKTOP WORKSPACE"
+            : "WEB WORKSPACE"}
           <span className="version">v0.1</span>
         </span>
       </footer>
@@ -415,7 +458,7 @@ export default function App() {
       <input
         ref={fileInput}
         type="file"
-        accept=".json,.bricklink.json"
+        accept=".json,.brickbuilder.json"
         aria-label="Import project file"
         hidden
         onChange={(e) => void openFile(e.target.files?.[0])}

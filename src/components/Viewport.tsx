@@ -126,7 +126,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFShadowMap;
-      renderer.setClearColor("#eeede8");
+      renderer.setClearColor("#373737");
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.25;
@@ -134,7 +134,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       renderer.domElement.setAttribute("role", "img");
       el.appendChild(renderer.domElement);
       const scene = new THREE.Scene();
-      scene.fog = new THREE.Fog("#eeede8", 65, 130);
+      scene.fog = new THREE.Fog("#373737", 65, 130);
       const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 250);
       camera.position.set(24, 23, 30);
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -162,13 +162,13 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       scene.add(fill);
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(500, 500),
-        new THREE.MeshStandardMaterial({ color: "#eeede8", roughness: 1 }),
+        new THREE.MeshStandardMaterial({ color: "#202020", roughness: 1 }),
       );
       ground.rotation.x = -Math.PI / 2;
       ground.position.y = -0.035;
       ground.receiveShadow = true;
       scene.add(ground);
-      const grid = new THREE.GridHelper(80, 80, "#cfcec7", "#deddd5");
+      const grid = new THREE.GridHelper(80, 80, "#626262", "#474747");
       grid.position.y = -0.02;
       scene.add(grid);
       const model = new THREE.Group();

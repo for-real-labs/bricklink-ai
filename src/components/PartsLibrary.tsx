@@ -1,4 +1,4 @@
-import { Box, Plus, Search, X } from "lucide-react";
+import { Box, ChevronRight, Layers3, Plus, Search, X } from "lucide-react";
 import { PARTS, CATEGORIES } from "../domain/catalog";
 import { track } from "../analytics";
 import { Button } from "./Button";
@@ -24,8 +24,7 @@ export function PartsLibrary({ editor }: { editor: Editor }) {
     >
       <div className="panel-heading">
         <div>
-          <h2>Parts library</h2>
-          <p>A little piece of possibility.</p>
+          <h2>Insert</h2>
         </div>
         <Button
           label="Close parts"
@@ -35,6 +34,28 @@ export function PartsLibrary({ editor }: { editor: Editor }) {
           <X size={17} />
         </Button>
         <span className="count-badge desktop-only">{PARTS.length}</span>
+      </div>
+      <div className="library-source">
+        <Layers3 size={15} />
+        <span>Main parts</span>
+        <span>{PARTS.length}</span>
+      </div>
+      <div className="category-heading">Shapes</div>
+      <div className="category-tabs">
+        {CATEGORIES.map((item) => (
+          <button
+            key={item}
+            className={category === item ? "selected" : ""}
+            onClick={() => {
+              setCategory(item);
+              track("category_selected", { category: item });
+            }}
+          >
+            <Box size={18} />
+            <span>{item}</span>
+            <ChevronRight size={12} />
+          </button>
+        ))}
       </div>
       <label className="search-field">
         <Search size={16} />
@@ -49,23 +70,9 @@ export function PartsLibrary({ editor }: { editor: Editor }) {
         />
         <kbd>⌕</kbd>
       </label>
-      <div className="category-tabs">
-        {CATEGORIES.map((item) => (
-          <button
-            key={item}
-            className={category === item ? "selected" : ""}
-            onClick={() => {
-              setCategory(item);
-              track("category_selected", { category: item });
-            }}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
       <div className="library-label">
         <span>
-          {category === "All parts" ? "THE ESSENTIALS" : category.toUpperCase()}
+          {category === "All parts" ? "ALL PARTS" : category.toUpperCase()}
         </span>
         <span>{visibleParts.length} parts</span>
       </div>
@@ -100,9 +107,9 @@ export function PartsLibrary({ editor }: { editor: Editor }) {
       <div className="library-footer">
         <Box size={16} />
         <span>
-          Original starter parts
+          BrickBuilder Studio
           <br />
-          <small>More room for your imagination.</small>
+          <small>26 essential parts</small>
         </span>
       </div>
     </aside>

@@ -1,7 +1,7 @@
 import type { Part } from "../domain/catalog";
 export function PartPreview({
   part,
-  color = "#c7c5be",
+  color = "#c4c7cb",
 }: {
   part: Part;
   color?: string;

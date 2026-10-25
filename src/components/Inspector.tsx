@@ -104,7 +104,7 @@ export function Inspector({ editor }: { editor: Editor }) {
           onClick={() => setPanel("steps")}
         >
           <List size={15} />
-          Steps<span>{project.steps}</span>
+          Step list<span>{project.steps}</span>
         </Button>
       </div>
       <div className="model-list">
@@ -193,7 +193,7 @@ export function Inspector({ editor }: { editor: Editor }) {
         <div className="section-label">
           {first
             ? `${selected.length} PART${selected.length === 1 ? "" : "S"} SELECTED`
-            : "MAKE IT YOURS"}
+            : "SELECTION"}
           {first && (
             <Button label="Clear selection" onClick={() => setSelected([])}>
               <X size={13} />

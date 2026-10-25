@@ -1,4 +1,4 @@
-# Bricklink AI working agreements
+# BrickBuilder Studio working agreements
 
 - Never push directly to or merge into `main` or another production branch without an explicit request for that specific branch or pull request in the current conversation. Push a feature branch and leave its pull request open.
 - Use Node.js 24 LTS and `npm ci`.

@@ -59,12 +59,8 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
             </Button>
             {modal === "help" && (
               <>
-                <span className="eyebrow">A LITTLE SPACE FOR BIG IDEAS</span>
-                <h1>
-                  Make something
-                  <br />
-                  only you could build.
-                </h1>
+                <span className="eyebrow">BRICKBUILDER STUDIO</span>
+                <h1>Building basics</h1>
                 <p>
                   Choose a part, move into the workspace, and click to place it.
                   Keep clicking to add more. Parts snap to the ground or stack
@@ -140,8 +136,8 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
             )}
             {modal === "export" && (
               <>
-                <span className="eyebrow">TAKE YOUR IDEA WITH YOU</span>
-                <h1>Made to be shared.</h1>
+                <span className="eyebrow">BRICKBUILDER STUDIO</span>
+                <h1>Export model</h1>
                 <p>
                   Save your creation, capture the view, or get ready to build it
                   in real life.
@@ -158,7 +154,7 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
                     <span>
                       <strong>Project file</strong>
                       <small>
-                        Editable .bricklink.json · all parts and steps
+                        Editable .brickbuilder.json · all parts and steps
                       </small>
                     </span>
                     <Download size={17} />
@@ -221,8 +217,8 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
             )}
             {modal === "inventory" && (
               <>
-                <span className="eyebrow">EVERY PIECE COUNTS</span>
-                <h1>Your parts list.</h1>
+                <span className="eyebrow">BRICKBUILDER STUDIO</span>
+                <h1>Parts list</h1>
                 <p>
                   {project.bricks.length} parts across {rows.length}{" "}
                   part-and-color combinations.

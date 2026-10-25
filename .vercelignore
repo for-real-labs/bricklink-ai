@@ -1,0 +1,10 @@
+.git
+node_modules
+release
+artifacts
+build
+docs
+electron
+coverage
+.env*
+*.tsbuildinfo

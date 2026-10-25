@@ -15,10 +15,13 @@ import { historyReducer } from "./domain/history";
 import type { ViewportHandle } from "./components/Viewport";
 import { download, imageBlob } from "./files";
 import { track } from "./analytics";
-const STORAGE_KEY = "bricklink-ai.project.v1";
+const STORAGE_KEY = "brickbuilder-studio.project.v1";
 function initialProject() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    // Read the previous autosave once so the product rename preserves local work.
+    const saved =
+      localStorage.getItem(STORAGE_KEY) ??
+      localStorage.getItem("bricklink-ai.project.v1");
     return saved ? parseProject(saved) : demoProject();
   } catch {
     return demoProject();
@@ -85,7 +88,7 @@ export function useEditor() {
   function save() {
     download(
       JSON.stringify(project, null, 2),
-      `${safeName}.bricklink.json`,
+      `${safeName}.brickbuilder.json`,
       "application/json",
     );
     announce("Project file saved.");
@@ -356,7 +359,7 @@ export function useEditor() {
     };
   }, [modal]);
   useEffect(() =>
-    window.bricklinkDesktop?.onMenu((action) => {
+    window.brickbuilderStudioDesktop?.onMenu((action) => {
       if (action === "save") save();
       if (action === "open") fileInput.current?.click();
       if (action === "new") setModal("new");

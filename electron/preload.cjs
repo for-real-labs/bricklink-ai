@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 const allowed = new Set(["new", "open", "save", "export", "undo", "redo"]);
-contextBridge.exposeInMainWorld("bricklinkDesktop", {
+contextBridge.exposeInMainWorld("brickbuilderStudioDesktop", {
   platform: process.platform,
   onMenu(callback) {
     const listener = (_event, action) => {

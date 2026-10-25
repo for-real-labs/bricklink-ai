@@ -7,10 +7,11 @@ const smoke = process.argv.includes("--smoke-test");
 let smokeDirectory;
 if (smoke) {
   smokeDirectory = fs.mkdtempSync(
-    path.join(os.tmpdir(), "bricklink-ai-smoke-"),
+    path.join(os.tmpdir(), "brickbuilder-studio-smoke-"),
   );
   app.setPath("userData", smokeDirectory);
 }
+app.setName("BrickBuilder Studio");
 const development = !app.isPackaged && process.argv.includes("--dev");
 let window;
 const send = (action) => window?.webContents.send("menu-action", action);
@@ -20,8 +21,8 @@ function createWindow() {
     height: 940,
     minWidth: 390,
     minHeight: 600,
-    title: "Bricklink AI",
-    backgroundColor: "#f6f5f2",
+    title: "BrickBuilder Studio",
+    backgroundColor: "#212226",
     show: !smoke,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -52,7 +53,7 @@ function createWindow() {
       try {
         // Verify the packaged renderer, WebGL, desktop bridge and sandbox, without touching real projects.
         const result = await window.webContents.executeJavaScript(
-          `new Promise((resolve,reject)=>{let attempts=0;const timer=setInterval(()=>{const canvas=document.querySelector('canvas');if(canvas){clearInterval(timer);const gl=canvas.getContext('webgl2');resolve({title:document.title,canvas:canvas.width>0&&canvas.height>0,webgl:!!gl,bridge:!!window.bricklinkDesktop,node:typeof window.require,parts:document.querySelectorAll('.model-row').length});}else if(++attempts>100){clearInterval(timer);reject(new Error('No WebGL canvas'));}},50);})`,
+          `new Promise((resolve,reject)=>{let attempts=0;const timer=setInterval(()=>{const canvas=document.querySelector('canvas');if(canvas){clearInterval(timer);const gl=canvas.getContext('webgl2');resolve({title:document.title,canvas:canvas.width>0&&canvas.height>0,webgl:!!gl,bridge:!!window.brickbuilderStudioDesktop,node:typeof window.require,parts:document.querySelectorAll('.model-row').length});}else if(++attempts>100){clearInterval(timer);reject(new Error('No WebGL canvas'));}},50);})`,
         );
         if (
           !result.canvas ||

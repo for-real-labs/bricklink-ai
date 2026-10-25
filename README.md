@@ -1,8 +1,10 @@
-# Bricklink AI
+# BrickBuilder Studio
 
 An independent, open-source 3D brick editor for the web and desktop. A small, working interpretation of BrickLink Studio's core building workflow, implemented in React, TypeScript, Three.js, and Electron.
 
-![Bricklink AI workspace](docs/workspace.jpg)
+**Live app: [studio.brickbuilder.ai](https://studio.brickbuilder.ai)** · Repository: [for-real-labs/bricklink-ai](https://github.com/for-real-labs/bricklink-ai)
+
+![BrickBuilder Studio workspace](docs/workspace.jpg)
 
 ## Run it
 
@@ -23,6 +25,7 @@ During development, `npm run desktop:dev` starts Vite on port 5174 and opens Ele
 
 ## Included
 
+- Studio-inspired dark workspace, BrickBuilder wordmark, compact toolbar, and working File/Edit/Model/View/Help menus.
 - 26 original procedural parts: bricks, plates, tiles, slopes, and round parts.
 - A real, lit 3D scene with shadows; orbit, pan, zoom, fit, and camera presets.
 - Search by name, dimensions, or part number; filter by category.
@@ -38,7 +41,7 @@ The garden pavilion example has 46 pieces and four build steps. Choose **New pro
 
 ## Files and privacy
 
-Projects use `.bricklink.json` (format version 1). The current project saves automatically on this device; download a project file to back it up or move it between the web and desktop apps. Opening a project or starting another replaces this workspace. There is no cloud sync. Imported projects are limited to 2 MB and 2,000 parts and are validated before replacing your model.
+Projects use `.brickbuilder.json` (format version 1). Previous JSON project downloads still open, and the previous browser autosave is read automatically on the same origin. Autosaves are scoped to each browser origin and desktop installation; use project files to move between them. The current project saves automatically on this device; download a project file to back it up or move it between the web and desktop apps. Opening a project or starting another replaces this workspace. There is no cloud sync. Imported projects are limited to 2 MB and 2,000 parts and are validated before replacing your model.
 
 Analytics are **disabled by default**. Optional PostHog events use `studio_*` names; they contain control names, part identifiers, counts, and colors, never project names or model files. To enable them for your own deployment, set a public project key via `VITE_POSTHOG_KEY` and optionally `VITE_POSTHOG_HOST` (`https://us.i.posthog.com` or `https://eu.i.posthog.com`). Do not put secret keys in Vite environment variables. Autocapture and session recording are disabled.
 
@@ -53,6 +56,12 @@ npm run desktop:dist -- --linux            # Linux AppImage
 ```
 
 Outputs go to `release/`. The Apple Silicon build is locally tested. Windows, Linux, and Intel Mac targets are configured but not verified. Mac packages are **unsigned and not notarized**; distribution to other Macs requires your own Apple signing and notarization setup. The repository does not include signing credentials. `npm run desktop` works directly from a local development checkout.
+
+## Hosting
+
+The app is deployed to the `brickbuilder-studio` Vercel project in `jjohnson3700team`. Cloudflare has a DNS-only `studio` A record pointing to `76.76.21.21`, as recommended by the Vercel CLI. Vercel serves HTTPS at `studio.brickbuilder.ai`.
+
+`vercel.json` defines the Vite build and skips the Electron binary download during cloud installation. `.vercelignore` excludes desktop packages and local artifacts from web uploads. Deploy an approved checkout with `vercel --prod --scope jjohnson3700team`. The initial deployment uses the CLI; automatic Git integration could not connect to the new repository with the existing Vercel installation permissions.
 
 ## Checks
 

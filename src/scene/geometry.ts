@@ -81,7 +81,7 @@ export function buildBrick(
       new THREE.EdgesGeometry(
         new THREE.BoxGeometry(part.width + 0.06, h + 0.1, part.depth + 0.06),
       ),
-      new THREE.LineBasicMaterial({ color: "#e76c47", depthTest: false }),
+      new THREE.LineBasicMaterial({ color: "#ff4b4b", depthTest: false }),
     );
     line.position.y = h / 2;
     line.renderOrder = 4;
