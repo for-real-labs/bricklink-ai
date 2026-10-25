@@ -100,3 +100,17 @@ export function searchParts(query: string, category: string) {
         .includes(normalized),
   );
 }
+
+export function getPart(id: string): Part {
+  return (
+    PART_MAP.get(id) ?? {
+      id,
+      name: `LDraw part ${id}`,
+      width: 2,
+      depth: 2,
+      height: 3,
+      category: "Imported",
+      kind: "brick",
+    }
+  );
+}

@@ -13,7 +13,7 @@ import {
   ArrowUpRight,
   Package,
 } from "lucide-react";
-import { COLORS, PART_MAP } from "../domain/catalog";
+import { COLORS, getPart } from "../domain/catalog";
 import { track } from "../analytics";
 import { Button } from "./Button";
 import type { Editor } from "../useEditor";
@@ -121,14 +121,14 @@ export function Inspector({ editor }: { editor: Editor }) {
                 className={`model-row ${selected.includes(brick.id) ? "selected" : ""} ${brick.hidden ? "hidden-part" : ""}`}
               >
                 <button
-                  aria-label={`Select ${PART_MAP.get(brick.partId)!.name} ${index + 1}`}
+                  aria-label={`Select ${getPart(brick.partId).name} ${index + 1}`}
                   onClick={(e) => select(brick.id, e.shiftKey)}
                 >
                   <span
                     className="mini-brick"
                     style={{ background: brick.color }}
                   />
-                  <span>{PART_MAP.get(brick.partId)!.name}</span>
+                  <span>{getPart(brick.partId).name}</span>
                   <small>{brick.step}</small>
                 </button>
                 <Button
@@ -204,7 +204,7 @@ export function Inspector({ editor }: { editor: Editor }) {
           <>
             <strong className="selected-name">
               {selected.length === 1
-                ? PART_MAP.get(first.partId)!.name
+                ? getPart(first.partId).name
                 : "Multiple parts"}
             </strong>
             <div className="position-fields">

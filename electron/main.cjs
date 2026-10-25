@@ -1,4 +1,17 @@
-const { app, BrowserWindow, Menu, session } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  Menu,
+  session,
+  ipcMain,
+  shell,
+  dialog,
+} = require("electron");
+const {
+  launchStudio,
+  parseDeepLink,
+  validateBuilderUrl,
+} = require("./integrations.cjs");
 const path = require("node:path");
 const os = require("node:os");
 const fs = require("node:fs");
@@ -14,6 +27,45 @@ if (smoke) {
 app.setName("BrickBuilder Studio");
 const development = !app.isPackaged && process.argv.includes("--dev");
 let window;
+let pendingLink;
+async function handleLink(url) {
+  try {
+    const model = parseDeepLink(url);
+    if (!app.isReady()) {
+      pendingLink = url;
+      return;
+    }
+    // Protocol links can originate on any website. Show the concrete model before launching another app.
+    const result = await dialog.showMessageBox(window, {
+      type: "question",
+      title: "Open in BrickLink Studio",
+      message: `Open “${model.name}” in native BrickLink Studio?`,
+      buttons: ["Open model", "Cancel"],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    if (result.response === 0) await launchStudio(model);
+  } catch (error) {
+    dialog.showErrorBox(
+      "Could not open BrickLink Studio",
+      error.message +
+        "\nDownload the .ldr file and choose File → Open in native Studio.",
+    );
+  }
+}
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  void handleLink(url);
+});
+if (!smoke) {
+  if (!app.requestSingleInstanceLock()) app.quit();
+  app.on("second-instance", (_event, args) => {
+    window?.show();
+    const link = args.find((arg) => arg.startsWith("brickbuilder-studio://"));
+    if (link) void handleLink(link);
+  });
+}
+
 const send = (action) => window?.webContents.send("menu-action", action);
 function createWindow() {
   window = new BrowserWindow({
@@ -154,6 +206,33 @@ app.whenReady().then(() => {
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
   createWindow();
+  const trusted = (event) => {
+    if (
+      event.sender !== window?.webContents ||
+      event.senderFrame !== window.webContents.mainFrame
+    )
+      throw new Error("Untrusted desktop request.");
+  };
+  ipcMain.handle("open-bricklink", async (event, model) => {
+    trusted(event);
+    try {
+      await launchStudio(model);
+    } catch {
+      throw new Error(
+        "Could not open native BrickLink Studio. Install it in its default location, or download the .ldr and open it manually.",
+      );
+    }
+  });
+  ipcMain.handle("open-brickbuilder", async (event, url) => {
+    trusted(event);
+    await shell.openExternal(validateBuilderUrl(url));
+  });
+  if (app.isPackaged && !smoke)
+    app.setAsDefaultProtocolClient("brickbuilder-studio");
+  const link =
+    pendingLink ||
+    process.argv.find((arg) => arg.startsWith("brickbuilder-studio://"));
+  if (link) void handleLink(link);
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

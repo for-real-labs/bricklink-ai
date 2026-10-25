@@ -14,6 +14,10 @@ import {
 import { historyReducer } from "./domain/history";
 import type { ViewportHandle } from "./components/Viewport";
 import { download, imageBlob } from "./files";
+import { parseLDraw } from "./domain/ldraw";
+import { receiveModel, BUILDER_ORIGIN } from "./integrations/transfer";
+import { transferToBrickBuilder } from "./integrations/actions";
+import { exportLDraw } from "./domain/model";
 import { track } from "./analytics";
 const STORAGE_KEY = "brickbuilder-studio.project.v1";
 function initialProject() {
@@ -40,19 +44,22 @@ export function useEditor() {
   const [query, setQuery] = useState(""),
     [category, setCategory] = useState("All parts"),
     [snap, setSnap] = useState(true),
-    [collision, setCollision] = useState(true),
+    [collision, setCollision] = useState(
+      () => !project.bricks.some((brick) => brick.ldraw),
+    ),
     [grid, setGrid] = useState(true);
   const [step, setStep] = useState(project.steps),
     [tab, setTab] = useState<"build" | "instructions">("build"),
     [panel, setPanel] = useState<"model" | "steps">("model");
   const [modal, setModal] = useState<
-      "help" | "export" | "new" | "inventory" | null
+      "help" | "export" | "new" | "inventory" | "bricklink" | null
     >(null),
     [notice, setNotice] = useState(""),
     [saved, setSaved] = useState(true),
     [mobilePanel, setMobilePanel] = useState<"parts" | "inspector" | null>(
       null,
     );
+  const [transferring, setTransferring] = useState(false);
   const viewport = useRef<ViewportHandle>(null),
     fileInput = useRef<HTMLInputElement>(null);
   const selectedBricks = project.bricks.filter((b) => selected.includes(b.id));
@@ -212,8 +219,12 @@ export function useEditor() {
     if (!file) return;
     try {
       if (file.size > MAX_FILE_SIZE)
-        throw new Error("Project is too large (2 MB maximum).");
-      const parsed = parseProject(await file.text());
+        throw new Error("Project is too large (16 MB maximum).");
+      const text = await file.text();
+      const parsed = /\.(ldr|mpd)$/i.test(file.name)
+        ? parseLDraw(text, file.name)
+        : parseProject(text);
+      if (parsed.bricks.some((b) => b.ldraw)) setCollision(false);
       restore(parsed);
       announce("Project opened.");
       track("project_opened", { part_count: parsed.bricks.length });
@@ -223,6 +234,72 @@ export function useEditor() {
       );
     }
     if (fileInput.current) fileInput.current.value = "";
+  }
+  useEffect(
+    () =>
+      receiveModel(
+        BUILDER_ORIGIN,
+        (model) => {
+          try {
+            const next = parseLDraw(model.content, model.name);
+            restore(next);
+            setCollision(false);
+            announce(
+              "Model imported. Original part transforms and colors are preserved.",
+            );
+            track("model_transfer_received", {
+              part_count: next.bricks.length,
+            });
+          } catch (error) {
+            announce(error instanceof Error ? error.message : "Import failed.");
+          }
+        },
+        (error) => announce(error.message),
+      ),
+    [],
+  );
+  async function sendToBuilder(action: "edit" | "order") {
+    if (transferring) return;
+    setTransferring(true);
+    track("brickbuilder_transfer_clicked", {
+      action,
+      part_count: project.bricks.length,
+    });
+    try {
+      await transferToBrickBuilder(project, action);
+      announce("Model sent to BrickBuilder.");
+    } catch (error) {
+      announce(
+        error instanceof Error
+          ? error.message
+          : "Transfer failed. Export the LDraw file and import it in BrickBuilder.",
+      );
+    } finally {
+      setTransferring(false);
+    }
+  }
+  async function openInBrickLink() {
+    setModal("bricklink");
+    track("open_in_bricklink_clicked", {
+      desktop: Boolean(window.brickbuilderStudioDesktop),
+    });
+    if (window.brickbuilderStudioDesktop) {
+      try {
+        await window.brickbuilderStudioDesktop.openInBrickLink({
+          name: project.name,
+          content: exportLDraw(project),
+        });
+        announce(
+          "Native BrickLink Studio launch requested. Complete any startup prompts in Studio.",
+        );
+      } catch (error) {
+        announce(
+          error instanceof Error
+            ? error.message
+            : "Could not open native Studio. Download the LDraw file instead.",
+        );
+      }
+    }
   }
   function exportImage() {
     const image = viewport.current?.image();
@@ -375,6 +452,9 @@ export function useEditor() {
     track("step_selected", { step: value });
   };
   return {
+    transferring,
+    sendToBuilder,
+    openInBrickLink,
     history,
     project,
     selected,

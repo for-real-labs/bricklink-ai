@@ -1,6 +1,6 @@
 {
   "name": "brickbuilder-studio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "An independent 3D brick building workspace for web and desktop",
   "author": "For Real Labs",
@@ -53,9 +53,18 @@
       ],
       "category": "Graphics",
       "icon": "build/icon.png"
-    }
+    },
+    "protocols": [
+      {
+        "name": "BrickBuilder Studio model bridge",
+        "schemes": [
+          "brickbuilder-studio"
+        ]
+      }
+    ]
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "lucide-react": "^1.61.0",
     "posthog-js": "^1.438.21",
     "react": "^19.3.1",

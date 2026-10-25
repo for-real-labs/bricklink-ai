@@ -43,3 +43,13 @@ The packaged Mac app was opened from `release/mac-arm64/BrickBuilder Studio.app`
 ## Verification limits
 
 Mac packages are unsigned and not notarized. Intel Mac, Windows, and Linux builds are configured but have not been tested. LDraw export is covered by transform/unit tests and reference checks; importing that output into the native Studio app has not been verified. The UI follows the native dark build workspace with approximate system typography; it is not a pixel-identical reproduction or the full Studio feature set.
+
+## Version 0.2 round-trip validation
+
+- 85 Studio tests passed, including exact LDraw transforms/colors/steps, nested model expansion, embedded geometry retention, malformed/recursive input rejection, origin/window/nonce transfer checks, safe desktop argument handling, and imported-model autosave behavior.
+- The BrickBuilder receiver passed the full 1,218-test frontend suite with 84.54% line coverage, followed by the affected tests after final refinements and a new imported-order UI test. Its production build passed.
+- Live Studio → BrickBuilder edit → Studio transfers preserved all 46 pavilion parts. A real AI edit changed the roof to red and produced a 46-piece orderable model and kit quote; no purchase was made.
+- The packaged Electron app sent its model into BrickBuilder’s landing-page edit stage through the compressed-fragment handoff.
+- Order handoff reached `/order` with the imported model and the required AI parts-validation step.
+- LDraw export/reimport rendered the model using LDraw part geometry. Mobile transfer buttons fit within 320px and 390px viewports without page overflow.
+- The native launch command started a separate Studio instance with the generated `.io` filepath. Its update dialog prevented the final model-opening check; native import completion remains unverified.

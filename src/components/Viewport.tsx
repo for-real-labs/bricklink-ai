@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import * as THREE from "three";
+import { importedMesh, setLDrawLibrary } from "../scene/ldrawGeometry";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { buildBrick, disposeObject, PLATE_HEIGHT } from "../scene/geometry";
 import {
@@ -22,6 +23,7 @@ export interface ViewportHandle {
 }
 interface Props {
   bricks: Brick[];
+  library?: string;
   selected: string[];
   draft: Brick | null;
   snap: boolean;
@@ -185,7 +187,25 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         candidate: null as Brick | null,
         rebuild: () => {},
       };
+      let revision = 0;
+      let previousIds = "";
       e.rebuild = () => {
+        const currentRevision = ++revision;
+        const ids = latest.current.bricks.map((b) => b.id).join(",");
+        const shouldFrame = ids !== previousIds;
+        previousIds = ids;
+        let pending = latest.current.bricks.filter(
+          (b) =>
+            b.ldraw &&
+            !b.hidden &&
+            b.step <= latest.current.step &&
+            b.id !== latest.current.draft?.id,
+        ).length;
+        const loaded = () => {
+          pending--;
+          if (pending === 0 && shouldFrame) frame();
+        };
+        setLDrawLibrary(latest.current.library ?? "");
         for (const child of [...model.children]) {
           model.remove(child);
           disposeObject(child);
@@ -193,7 +213,26 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         const p = latest.current;
         for (const brick of p.bricks)
           if (!brick.hidden && brick.step <= p.step && brick.id !== p.draft?.id)
-            model.add(buildBrick(brick, p.selected.includes(brick.id)));
+            if (brick.ldraw) {
+              void importedMesh(brick, p.selected.includes(brick.id), false)
+                .then((mesh) => {
+                  if (engine.current !== e || revision !== currentRevision) {
+                    disposeObject(mesh);
+                    return;
+                  }
+                  model.add(mesh);
+                  loaded();
+                })
+                .catch(() => {
+                  if (engine.current !== e || revision !== currentRevision)
+                    return;
+                  model.add(buildBrick(brick, p.selected.includes(brick.id)));
+                  loaded();
+                  p.onError(
+                    `Part ${brick.partId} preview unavailable. Its original LDraw data is preserved; a placeholder is shown.`,
+                  );
+                });
+            } else model.add(buildBrick(brick, p.selected.includes(brick.id)));
         grid.visible = p.grid;
         controls.mouseButtons.LEFT = p.draft ? null : THREE.MOUSE.ROTATE;
         if (e.ghost) {
@@ -328,6 +367,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       engine.current?.rebuild();
     }, [
       props.bricks,
+      props.library,
       props.selected,
       props.draft,
       props.grid,

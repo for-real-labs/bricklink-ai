@@ -1,4 +1,7 @@
 import {
+  Sparkles,
+  ShoppingBag,
+  ExternalLink,
   Box,
   Camera,
   EyeOff,
@@ -30,7 +33,7 @@ import {
   Package,
   BookOpen,
 } from "lucide-react";
-import { PART_MAP } from "./domain/catalog";
+import { getPart } from "./domain/catalog";
 import { Button } from "./components/Button";
 import { Viewport } from "./components/Viewport";
 import { useEditor } from "./useEditor";
@@ -120,6 +123,42 @@ export default function App() {
           </Button>
         </div>
       </header>
+      <nav className="integration-bar" aria-label="AI and model transfers">
+        <Button
+          label="Edit with AI"
+          className="primary"
+          disabled={editor.transferring || !project.bricks.length}
+          onClick={() => void editor.sendToBuilder("edit")}
+        >
+          <Sparkles size={16} />
+          Edit with AI
+        </Button>
+        <Button
+          label="Import into BrickBuilder"
+          disabled={editor.transferring || !project.bricks.length}
+          onClick={() => void editor.sendToBuilder("edit")}
+        >
+          <ExternalLink size={15} />
+          Import into BrickBuilder
+        </Button>
+        <Button
+          label="Order this model"
+          disabled={editor.transferring || !project.bricks.length}
+          onClick={() => void editor.sendToBuilder("order")}
+        >
+          <ShoppingBag size={16} />
+          Order this model
+        </Button>
+        <span className="integration-spacer" />
+        <Button
+          label="Open in BrickLink"
+          disabled={!project.bricks.length}
+          onClick={() => void editor.openInBrickLink()}
+        >
+          <ExternalLink size={16} />
+          Open in BrickLink
+        </Button>
+      </nav>
       <nav className="workspace-toolbar" aria-label="Building tools">
         <div className="editing-tools">
           <Button
@@ -278,6 +317,7 @@ export default function App() {
           <Viewport
             ref={viewport}
             bricks={project.bricks}
+            library={project.library}
             selected={selected}
             draft={draft}
             snap={snap}
@@ -342,7 +382,7 @@ export default function App() {
                 {project.bricks.some((b) => b.id === draft.id)
                   ? "Move"
                   : "Place"}{" "}
-                {PART_MAP.get(draft.partId)!.name}
+                {getPart(draft.partId).name}
               </strong>
               <span>Click to place · R to rotate</span>
               <Button label="Cancel placement" onClick={() => setDraft(null)}>
@@ -430,7 +470,7 @@ export default function App() {
           {window.brickbuilderStudioDesktop
             ? "DESKTOP WORKSPACE"
             : "WEB WORKSPACE"}
-          <span className="version">v0.1</span>
+          <span className="version">v0.2</span>
         </span>
       </footer>
       <nav className="mobile-nav">
@@ -458,7 +498,7 @@ export default function App() {
       <input
         ref={fileInput}
         type="file"
-        accept=".json,.brickbuilder.json"
+        accept=".json,.brickbuilder.json,.ldr,.mpd"
         aria-label="Import project file"
         hidden
         onChange={(e) => void openFile(e.target.files?.[0])}

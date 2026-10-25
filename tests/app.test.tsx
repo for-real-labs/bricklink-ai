@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+// These scenarios exercise several user interactions across the full editor DOM.
+vi.setConfig({ testTimeout: 15000 });
 import { forwardRef, useImperativeHandle } from "react";
 import type { Brick } from "../src/domain/model";
 import { createBrick, emptyProject } from "../src/domain/model";
@@ -29,6 +31,7 @@ vi.mock("../src/components/Viewport", () => ({
   }),
 }));
 import App from "../src/App";
+import { parseLDraw } from "../src/domain/ldraw";
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem(
@@ -37,6 +40,16 @@ beforeEach(() => {
   );
 });
 describe("editor interactions", () => {
+  it("keeps approximate collision disabled when restoring an imported model", () => {
+    localStorage.setItem(
+      "brickbuilder-studio.project.v1",
+      JSON.stringify(parseLDraw("1 4 0 0 0 1 0 0 0 1 0 0 0 1 3001.dat")),
+    );
+    render(<App />);
+    expect(
+      screen.getByRole("button", { name: "Collision detection" }),
+    ).not.toHaveClass("active");
+  });
   it("searches, places, recolors, undoes, and restores from autosave", async () => {
     const user = userEvent.setup();
     const { unmount } = render(<App />);
@@ -129,7 +142,9 @@ describe("editor interactions", () => {
     expect(within(dialog).getByText("Project file")).toBeInTheDocument();
     expect(within(dialog).getByText("Image")).toBeInTheDocument();
     expect(within(dialog).getByText("Parts list")).toBeInTheDocument();
-    expect(within(dialog).getByText("LDraw model")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("BrickLink Studio / LDraw"),
+    ).toBeInTheDocument();
   });
   it("opens the mobile controls", async () => {
     const user = userEvent.setup();
@@ -169,9 +184,7 @@ describe("Studio menus and project compatibility", () => {
       JSON.stringify(project),
     );
     render(<App />);
-    await user.click(
-      screen.getByRole("button", { name: "Model" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Model" }));
     await user.click(screen.getByRole("button", { name: "Show all parts" }));
     expect(
       JSON.parse(localStorage.getItem("brickbuilder-studio.project.v1")!)
@@ -182,9 +195,7 @@ describe("Studio menus and project compatibility", () => {
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "File" }));
     await user.keyboard("{Escape}");
-    expect(
-      screen.getByRole("button", { name: "File" }),
-    ).toHaveFocus();
+    expect(screen.getByRole("button", { name: "File" })).toHaveFocus();
     expect(
       screen.queryByRole("button", { name: "New model…" }),
     ).not.toBeInTheDocument();

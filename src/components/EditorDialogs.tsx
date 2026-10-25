@@ -1,3 +1,4 @@
+import { nativeStudioLink } from "../integrations/actions";
 import {
   Box,
   Download,
@@ -46,7 +47,9 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
                   ? "Export your creation"
                   : modal === "new"
                     ? "Start a new project"
-                    : "Parts list"
+                    : modal === "bricklink"
+                      ? "Open in BrickLink"
+                      : "Parts list"
             }
             onClick={(e) => e.stopPropagation()}
           >
@@ -91,7 +94,9 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
                   Orbit: drag or right-drag. Pan: Shift-drag or middle-drag.
                   Touch: one finger orbits; two fingers pan and zoom. Desktop
                   recommended for detailed builds. Independent software, not
-                  affiliated with BrickLink or the LEGO Group.
+                  affiliated with BrickLink or the LEGO Group. Imported geometry
+                  uses the LDraw.org Parts Library, © its contributing authors,
+                  under CC BY 4.0 / CC0.
                 </p>
                 <Button
                   label="Start building"
@@ -205,14 +210,87 @@ export function EditorDialogs({ editor }: { editor: Editor }) {
                   >
                     <Box />
                     <span>
-                      <strong>LDraw model</strong>
+                      <strong>BrickLink Studio / LDraw</strong>
                       <small>
-                        .ldr for compatible tools · approximate colors
+                        .ldr · open directly in native BrickLink Studio
                       </small>
                     </span>
                     <Download size={17} />
                   </button>
                 </div>
+              </>
+            )}
+            {modal === "bricklink" && (
+              <>
+                <span className="eyebrow">NATIVE BRICKLINK STUDIO</span>
+                <h1>Open in BrickLink</h1>
+                <p>
+                  Use the BrickBuilder Studio desktop app to hand this model to
+                  native BrickLink Studio. Both desktop apps must be installed.
+                  Native Studio may show its own startup or update prompts.
+                </p>
+                <div className="dialog-actions">
+                  {!window.brickbuilderStudioDesktop && (
+                    <Button
+                      label="Launch desktop bridge"
+                      className="primary"
+                      onClick={() => {
+                        try {
+                          window.location.href = nativeStudioLink(project);
+                          track("desktop_bridge_launched");
+                        } catch (error) {
+                          editor.announce(
+                            error instanceof Error
+                              ? error.message
+                              : "Download the LDraw file instead.",
+                          );
+                        }
+                      }}
+                    >
+                      Open installed desktop app
+                    </Button>
+                  )}
+                  <Button
+                    label="Download for BrickLink Studio"
+                    onClick={() => {
+                      download(
+                        exportLDraw(project),
+                        `${safeName}.ldr`,
+                        "text/plain",
+                      );
+                      track("exported", {
+                        format: "ldraw",
+                        destination: "bricklink",
+                      });
+                    }}
+                  >
+                    Download .ldr
+                  </Button>
+                </div>
+                {!window.brickbuilderStudioDesktop && (
+                  <p className="fine-print">
+                    <a
+                      href="https://github.com/for-real-labs/bricklink-ai/releases/tag/v0.2.0"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => track("desktop_download_clicked")}
+                    >
+                      Get the BrickBuilder Studio desktop app
+                    </a>{" "}
+                    · Early preview for Apple Silicon Mac; unsigned.
+                  </p>
+                )}
+                <p className="fine-print">
+                  If the desktop link does not open, download .ldr and choose
+                  File → Open in BrickLink Studio. To return here, use File →
+                  Export As → LDraw in native Studio, then open the exported
+                  .ldr or .mpd in BrickBuilder Studio.
+                </p>
+                <p className="fine-print">
+                  BrickLink Studio has no documented browser URL protocol. This
+                  link uses the BrickBuilder Studio desktop bridge. On Linux,
+                  export the file and open it in your preferred LDraw tool.
+                </p>
               </>
             )}
             {modal === "inventory" && (

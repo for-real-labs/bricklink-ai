@@ -104,7 +104,7 @@ describe("project validation", () => {
     ).toThrow("step");
   });
   it("enforces size and count limits", () => {
-    expect(() => parseProject(" ".repeat(2_000_001))).toThrow("large");
+    expect(() => parseProject(" ".repeat(16_000_001))).toThrow("large");
     expect(() =>
       parseProject(
         JSON.stringify({

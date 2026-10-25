@@ -1,5 +1,7 @@
+import { parseLDraw } from "./ldraw";
 import { z } from "zod";
-import { PART_MAP, COLORS } from "./catalog";
+import { PART_MAP, COLORS, getPart } from "./catalog";
+import { exportImportedBrick } from "./ldrawTransform";
 export interface Brick {
   id: string;
   partId: string;
@@ -10,31 +12,54 @@ export interface Brick {
   rotation: number;
   step: number;
   hidden: boolean;
+  ldraw?: {
+    transform: number[];
+    colorCode: string;
+    originalColor: string;
+    anchor: number[];
+  };
 }
 export interface Project {
   version: 1;
   name: string;
   bricks: Brick[];
   steps: number;
+  library?: string;
 }
 const position = z.number().finite().min(-256).max(256);
-const brickSchema = z.object({
-  id: z.string().min(1).max(100),
-  partId: z.string().refine((id) => PART_MAP.has(id), "Unknown part"),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  x: position,
-  z: position,
-  y: z.number().finite().min(0).max(256),
-  rotation: z.number().int().min(0).max(3),
-  step: z.number().int().min(1).max(100),
-  hidden: z.boolean(),
-});
+const brickSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+    partId: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,79}$/i),
+    color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    x: position,
+    z: position,
+    y: position,
+    rotation: z.number().int().min(0).max(3),
+    step: z.number().int().min(1).max(100),
+    hidden: z.boolean(),
+    ldraw: z
+      .object({
+        transform: z
+          .array(z.number().finite().min(-100000).max(100000))
+          .length(12),
+        colorCode: z.string().regex(/^(?:\d{1,9}|0x[23][a-fA-F0-9]{6})$/),
+        originalColor: z.string().regex(/^#[a-fA-F0-9]{6}$/),
+        anchor: z.array(position).length(3),
+      })
+      .optional(),
+  })
+  .refine(
+    (b) => Boolean(b.ldraw) || (PART_MAP.has(b.partId) && b.y >= 0),
+    "Unknown part or invalid height",
+  );
 export const projectSchema = z
   .object({
     version: z.literal(1),
     name: z.string().trim().min(1).max(80),
     bricks: z.array(brickSchema).max(2000),
     steps: z.number().int().min(1).max(100),
+    library: z.string().max(16_000_000).optional(),
   })
   .superRefine((p, ctx) => {
     if (new Set(p.bricks.map((b) => b.id)).size !== p.bricks.length)
@@ -42,13 +67,15 @@ export const projectSchema = z
     if (p.bricks.some((b) => b.step > p.steps))
       ctx.addIssue({ code: "custom", message: "Invalid build step" });
   });
-export const MAX_FILE_SIZE = 2_000_000;
+export const MAX_FILE_SIZE = 16_000_000;
 export function parseProject(text: string): Project {
   if (text.length > MAX_FILE_SIZE)
-    throw new Error("Project is too large (2 MB maximum).");
+    throw new Error("Project is too large (16 MB maximum).");
   const result = projectSchema.safeParse(JSON.parse(text));
   if (!result.success)
     throw new Error(`Invalid project: ${result.error.issues[0].message}`);
+  if (result.data.library)
+    parseLDraw("1 16 0 0 0 1 0 0 0 1 0 0 0 1 3001.dat\n" + result.data.library);
   return result.data;
 }
 export function createBrick(partId: string, color: string, step = 1): Brick {
@@ -65,7 +92,7 @@ export function createBrick(partId: string, color: string, step = 1): Brick {
   };
 }
 export function footprint(brick: Brick) {
-  const part = PART_MAP.get(brick.partId)!;
+  const part = getPart(brick.partId);
   return {
     width: brick.rotation % 2 ? part.depth : part.width,
     depth: brick.rotation % 2 ? part.width : part.depth,
@@ -125,7 +152,7 @@ export function inventory(project: Project) {
     const old = rows.get(key);
     rows.set(key, {
       partId: b.partId,
-      name: PART_MAP.get(b.partId)!.name,
+      name: getPart(b.partId).name,
       color: b.color,
       quantity: (old?.quantity ?? 0) + 1,
     });
@@ -142,6 +169,8 @@ export function exportCsv(project: Project) {
 }
 export function exportLDraw(project: Project) {
   const lines = [
+    "0 FILE brickbuilder-model.ldr",
+    `0 ${project.name.replace(/[\r\n]/g, " ")}`,
     "0 BrickBuilder Studio model",
     "0 Generated from original procedural part approximations",
   ];
@@ -150,6 +179,10 @@ export function exportLDraw(project: Project) {
     while (lastStep < b.step) {
       lines.push("0 STEP");
       lastStep++;
+    }
+    if (b.ldraw) {
+      lines.push(exportImportedBrick(b));
+      continue;
     }
     const f = footprint(b),
       isSlope = PART_MAP.get(b.partId)!.kind === "slope";
@@ -165,7 +198,7 @@ export function exportLDraw(project: Project) {
       `1 ${color} ${originX} ${-(b.y + f.height) * 8} ${originZ} ${c} 0 ${s} 0 1 0 ${-s} 0 ${c} ${b.partId}.dat`,
     );
   }
-  return lines.join("\n") + "\n";
+  return lines.join("\n") + "\n" + (project.library ?? "");
 }
 export function emptyProject(): Project {
   return { version: 1, name: "Untitled build", bricks: [], steps: 1 };

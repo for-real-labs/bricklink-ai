@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { PART_MAP } from "../domain/catalog";
+import { getPart } from "../domain/catalog";
 import { footprint, type Brick } from "../domain/model";
 export const PLATE_HEIGHT = 0.4;
 export function buildBrick(
@@ -9,7 +9,7 @@ export function buildBrick(
   ghost = false,
   valid = true,
 ) {
-  const part = PART_MAP.get(brick.partId)!;
+  const part = getPart(brick.partId);
   const group = new THREE.Group();
   const h = part.height * PLATE_HEIGHT;
   const material = new THREE.MeshStandardMaterial({

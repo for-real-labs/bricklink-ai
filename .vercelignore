@@ -4,6 +4,7 @@ release
 artifacts
 build
 docs
+articles
 electron
 coverage
 .env*
