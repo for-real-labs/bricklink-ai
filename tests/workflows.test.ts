@@ -138,7 +138,7 @@ describe("familiar Studio workflows", () => {
       ],
     };
     const mpd = exportMpd(original);
-    expect(mpd).toContain("0 FILE assembly-1.ldr");
+    expect(mpd).toContain("0 FILE roof-1.ldr");
     expect(mpd).toContain("0 Roof");
     const restored = parseLDraw(mpd);
     expect(restored.bricks).toHaveLength(3);
@@ -152,6 +152,10 @@ describe("familiar Studio workflows", () => {
       placements(exportLDraw(original)),
     );
     expect(restored.bricks.filter((b) => b.group)).toHaveLength(2);
+    expect(restored.bricks.filter((b) => b.group).map((b) => b.group)).toEqual([
+      "Roof",
+      "Roof",
+    ]);
   });
   it("detects overlaps, ignores hidden parts, and keeps rotated bounds finite", () => {
     const a = brick(),
@@ -167,11 +171,38 @@ describe("familiar Studio workflows", () => {
     expect(bounds.maxX - bounds.x).toBeCloseTo(1.2);
   });
 });
-it('bounds model review output for heavily overlapping models', () => {
-  const report = checkModel({ ...emptyProject(), bricks: Array.from({ length: 30 }, () => brick()) });
+it("bounds model review output for heavily overlapping models", () => {
+  const report = checkModel({
+    ...emptyProject(),
+    bricks: Array.from({ length: 30 }, () => brick()),
+  });
   expect(report.issues).toHaveLength(100);
   expect(report.truncated).toBe(true);
 });
-it('rejects reversed measured part bounds when reopening project data', () => {
-  expect(() => parseProject(JSON.stringify({ ...emptyProject(), bricks: [{ ...brick(), bounds: [10, 0, 0, -10, 20, 20] }] }))).toThrow('Invalid part bounds');
+it("rejects reversed measured part bounds when reopening project data", () => {
+  expect(() =>
+    parseProject(
+      JSON.stringify({
+        ...emptyProject(),
+        bricks: [{ ...brick(), bounds: [10, 0, 0, -10, 20, 20] }],
+      }),
+    ),
+  ).toThrow("Invalid part bounds");
+});
+it("preserves exact Unicode submodel names while keeping MPD filenames safe", () => {
+  const project = {
+    ...emptyProject(),
+    bricks: [{ ...brick(), group: "Front roof — red / blue" }],
+  };
+  const exported = exportMpd(project);
+  expect(exported).toContain("0 FILE front-roof-red-blue-1.ldr");
+  expect(parseLDraw(exported).bricks[0].group).toBe("Front roof — red / blue");
+});
+it("keeps repeated native submodel instances independent", () => {
+  const text =
+    "0 FILE root.ldr\n1 4 0 0 0 1 0 0 0 1 0 0 0 1 roof.ldr\n1 4 100 0 0 1 0 0 0 1 0 0 0 1 roof.ldr\n0 FILE roof.ldr\n1 16 0 -24 0 1 0 0 0 1 0 0 0 1 3001.dat";
+  expect(parseLDraw(text).bricks.map((b) => b.group)).toEqual([
+    "roof",
+    "roof 2",
+  ]);
 });

@@ -65,8 +65,31 @@ export function parseLDraw(text: string, name = "Imported model"): Project {
     if (color) colors.set(color[1], color[2]);
   }
   const bricks: Brick[] = [];
-  let maxStep = 1,
-    groupIndex = 0;
+  let maxStep = 1;
+  const usedGroups = new Set<string>();
+  function groupName(file: string): string {
+    const marker = sections
+      .get(file)
+      ?.find((line) => line.startsWith("0 !BRICKBUILDER GROUP "));
+    let name = file.replace(/\.(ldr|mpd)$/i, "").slice(0, 70);
+    if (marker) {
+      try {
+        const value: unknown = JSON.parse(
+          marker.slice("0 !BRICKBUILDER GROUP ".length),
+        );
+        if (typeof value !== "string" || !value.trim() || value.length > 80)
+          throw new Error();
+        name = value.trim();
+      } catch {
+        throw new Error("Invalid submodel name metadata.");
+      }
+    }
+    let unique = name,
+      index = 2;
+    while (usedGroups.has(unique)) unique = `${name.slice(0, 70)} ${index++}`;
+    usedGroups.add(unique);
+    return unique;
+  }
   const visit = (
     lines: string[],
     parent: number[],
@@ -106,8 +129,7 @@ export function parseLDraw(text: string, name = "Imported model"): Project {
           color,
           new Set([...stack, file]),
           step,
-          group ??
-            `${file.replace(/\.(ldr|mpd)$/i, "").slice(0, 55)} ${++groupIndex}`,
+          group ?? groupName(file),
         );
       } else {
         if (!/^[a-z0-9][a-z0-9_-]{0,79}\.dat$/i.test(file))

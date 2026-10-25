@@ -254,14 +254,22 @@ export function exportMpd(project: Project): string {
   groups.forEach((group, index) => {
     const bricks = project.bricks.filter((b) => b.group === group),
       start = Math.min(...bricks.map((b) => b.step));
-    const filename = `assembly-${index + 1}.ldr`;
+    const stem =
+      group
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, "-")
+        .slice(0, 45) || "assembly";
+    const filename = `${stem}-${index + 1}.ldr`;
     sections.push(
       exportLDraw({
         version: 1,
         name: group,
         steps: project.steps - start + 1,
         bricks: bricks.map((b) => ({ ...b, step: b.step - start + 1 })),
-      }).replace("0 FILE brickbuilder-model.ldr", `0 FILE ${filename}`),
+      }).replace(
+        "0 FILE brickbuilder-model.ldr",
+        `0 FILE ${filename}\n0 !BRICKBUILDER GROUP ${JSON.stringify(group)}`,
+      ),
     );
     // Temporary references are serialized below, never accepted as editable part IDs.
     root.push({

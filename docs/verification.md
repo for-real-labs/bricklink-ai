@@ -73,7 +73,7 @@ Both articles were published publicly on AI and LEGO on Substack, with email and
 ## Version 0.3 core workflows
 
 - Clean Node 24 `npm ci` completed; npm audit found zero vulnerabilities.
-- All 110 tests passed across 12 suites. The production TypeScript/Vite build passed.
+- All 112 tests passed across 12 suites. The production TypeScript/Vite build passed.
 - Source and packaged Electron smoke tests passed with WebGL, 46 example parts, the narrow desktop bridge, and no renderer Node access.
 - Apple Silicon ZIP and DMG packaging completed successfully. Packages remain unsigned and not notarized.
 - Actual web acceptance: encrypted `.io` import, Technic 3700 geometry/thumbnail loading and placement, two-part marquee selection, 45° Z rotation, copy/paste, isolation/restoration, step reorder/delete, and selectable overlap review.
@@ -81,3 +81,5 @@ Both articles were published publicly on AI and LEGO on Substack, with email and
 - Mobile checks at actual 320px and 390px CSS widths showed no page overflow. The compact mobile category picker leaves the thumbnail grid usable; advanced inspector controls scroll within the panel.
 - Reference screenshots: `docs/catalog-mobile-v0.3.jpg`, `docs/mobile-v0.3.jpg`, and `docs/desktop-v0.3.jpg`.
 - See `docs/core-workflows.md` for the ten workflows and explicit scope limits. Native Studio deep-link completion is still unverified; this release verifies reading Studio files in BrickBuilder Studio, not the external app's startup behavior.
+
+- The final MPD acceptance check caught and fixed submodel-name loss. Exact names, including Unicode, now survive export/reimport; repeated native submodel instances remain independent. Browser verification reopened the exported five-part model with its “Roof left” name intact.
